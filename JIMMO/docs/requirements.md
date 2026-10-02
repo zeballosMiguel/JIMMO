@@ -49,38 +49,31 @@ El sistema debe:
 - asignar costo FIFO;
 - mantener trazabilidad de las asignaciones.
 
-## 6. Pedidos
+## 6. Pedidos y Ventas
 Estados aprobados:
-- BORRADOR
-- RESERVADO
-- COMPLETADO
+- RESERVADO (con adelanto en tienda)
+- COMPLETADO (venta directa)
 - CANCELADO
 
+No existe estado BORRADOR. Toda venta compromete/descuenta el inventario disponible en tiempo real.
+
 Un pedido tiene cliente, vendedor, sucursal/canal/tipo de entrega según modelo, detalles, pagos y datos de entrega.
-
 Los detalles contienen como mínimo variante, cantidad y precio histórico.
-
 El total debe calcularse en servidor.
 
-## 7. Flujo de pedido
-### BORRADOR
-Puede modificarse antes de completar/reservar.
+## 7. Flujo de pedido y venta
+### RESERVADO (con Adelanto)
+El cliente pasa por tienda y deja un anticipo. El stock queda apartado/descontado del disponible inmediatamente y el pedido registra el pago inicial manteniendo un saldo pendiente por cobrar.
 
-### RESERVADO
-El stock está reservado y el pedido puede tener un pago/reserva inicial.
-
-### COMPLETADO
-La venta se consolida, se consume el stock y se registra la salida correspondiente. La utilidad usa el costo FIFO.
+### COMPLETADO (Venta Directa)
+La venta se consolida de inmediato con cobro total o entrega final, se consume el stock y se registra la salida correspondiente. La utilidad usa el costo FIFO efectivo.
 
 ### CANCELADO
-No puede continuar el flujo comercial. Si existía una reserva activa, debe liberarse el stock correctamente y conservarse el historial.
+No puede continuar el flujo comercial. Si existía una reserva activa, se libera el stock correctamente y se conserva el historial.
 
 ## 8. Edición
-`BORRADOR` puede editarse.
-`RESERVADO` puede editarse mediante flujo transaccional que libera la asignación anterior y reconstruye la nueva.
-
+`RESERVADO` puede editarse mediante flujo transaccional que libera la asignación anterior y reconstruye la nueva con las cantidades y variantes ajustadas.
 `COMPLETADO` y `CANCELADO` son históricos e inmutables por el flujo normal.
-
 Las ediciones de pedidos reservados no deben destruir el historial de detalles/asignaciones.
 
 ## 9. Pagos

@@ -1,0 +1,10 @@
+node_modules/
+.git/
+.next/
+.agents/
+.claude/
+.cursor/
+.devin/
+dist/
+build/
+package-lock.json

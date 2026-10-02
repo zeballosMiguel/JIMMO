@@ -1,27 +1,36 @@
-# JIMMO
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-Sistema de gestión de ventas, inventario, pedidos, clientes, entregas y rentabilidad.
+## Getting Started
 
-## Estado
-Base funcional/dominio: **JIMMO V4.1**.
+First, run the development server:
 
-## Principio
-JIMMO se desarrolla por fases. El agente no debe construir todo de golpe.
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
 
-## Documentación
-- `AGENTS.md` — reglas permanentes del agente.
-- `docs/project-context.md` — contexto real del negocio.
-- `docs/requirements.md` — requisitos.
-- `docs/business-rules.md` — reglas de negocio.
-- `docs/database.md` — modelo BD V4.1.
-- `docs/architecture.md` — arquitectura tecnológica.
-- `docs/decisions.md` — decisiones aprobadas.
-- `docs/development-plan.md` — fases.
-- `docs/antigravity-workflow.md` — forma de trabajo con Antigravity.
-- `docs/phase-0-prompt.md` — primer objetivo del agente.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## Base de datos
-`database/Jimmo_V4_1.sql` es el punto de partida del esquema.
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-## Regla
-Toda modificación de esquema se realiza mediante migración versionada.
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

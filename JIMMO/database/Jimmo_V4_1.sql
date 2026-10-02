@@ -392,7 +392,7 @@ ON variantes_producto (
 CREATE TABLE lotes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
-    numero_lote INTEGER NOT NULL UNIQUE,
+    numero_lote INTEGER GENERATED ALWAYS AS IDENTITY UNIQUE,
 
     fecha_compra DATE,
     fecha_recepcion DATE,
@@ -607,7 +607,7 @@ CREATE TABLE detalle_pedido (
 
     utilidad NUMERIC(14,2)
         GENERATED ALWAYS AS (
-            subtotal - costo_total
+            (cantidad * precio_unitario) - (cantidad * costo_unitario)
         ) STORED,
 
     -- Los detalles editados se conservan para auditoría histórica.
@@ -1403,7 +1403,6 @@ SET search_path = public
 AS $$
     SELECT ROUND(
         COALESCE(dl.costo_unitario_bs, 0)
-        + COALESCE(dl.otros_costos_bs, 0) / NULLIF(dl.cantidad, 0)
         + COALESCE((
             SELECT SUM(cl.monto_bs)
             FROM costos_lote cl
@@ -2494,45 +2493,70 @@ GROUP BY
 -- 47. VISTA DE RENTABILIDAD POR LOTE
 -- ============================================================
 
+DROP VIEW IF EXISTS vw_rentabilidad_lote CASCADE;
+
 CREATE OR REPLACE VIEW vw_rentabilidad_lote AS
-SELECT
-
-    l.id AS lote_id,
-    l.numero_lote,
-
-    SUM(
-        dl.cantidad
-        * COALESCE(
-            dl.costo_unitario_bs,
-            0
-        )
-    ) AS costo_mercaderia,
-
-    COALESCE(
-        (
+WITH lotes_base AS (
+    SELECT
+        l.id AS lote_id,
+        l.numero_lote,
+        l.estado,
+        l.fecha_compra,
+        l.fecha_recepcion,
+        l.costo_total_usd,
+        l.tipo_cambio,
+        l.gastos_extras_bs,
+        COALESCE(SUM(dl.cantidad), 0) AS unidades_compradas,
+        COALESCE(SUM(dl.cantidad_disponible), 0) AS unidades_disponibles,
+        COALESCE(SUM(dl.cantidad * dl.costo_unitario_bs), 0) AS costo_mercaderia_bs,
+        COALESCE((
             SELECT SUM(cl.monto_bs)
             FROM costos_lote cl
             WHERE cl.lote_id = l.id
-        ),
-        0
-    ) AS otros_costos,
-
-    SUM(
-        dl.cantidad
-        * COALESCE(
-            dl.precio_detalle,
-            0
-        )
-    ) AS ingreso_potencial
-
-FROM lotes l
-
-JOIN detalle_lote dl
-    ON dl.lote_id = l.id
-
-GROUP BY
-    l.id,
-    l.numero_lote;
+        ), 0) AS costos_adicionales_bs
+    FROM lotes l
+    LEFT JOIN detalle_lote dl ON dl.lote_id = l.id
+    GROUP BY l.id, l.numero_lote, l.estado, l.fecha_compra, l.fecha_recepcion, l.costo_total_usd, l.tipo_cambio, l.gastos_extras_bs
+),
+ventas_lote AS (
+    SELECT
+        dl.lote_id,
+        COALESCE(SUM(alp.cantidad), 0) AS unidades_vendidas,
+        COALESCE(SUM(alp.cantidad * dp.precio_unitario), 0) AS ventas_totales_bs,
+        COALESCE(SUM(alp.cantidad * alp.costo_unitario_bs), 0) AS costo_ventas_bs
+    FROM asignaciones_lote_pedido alp
+    JOIN detalle_lote dl ON dl.id = alp.detalle_lote_id
+    JOIN detalle_pedido dp ON dp.id = alp.detalle_pedido_id
+    JOIN pedidos p ON p.id = dp.pedido_id
+    WHERE alp.activa = TRUE
+      AND p.estado = 'COMPLETADO'
+    GROUP BY dl.lote_id
+)
+SELECT
+    lb.lote_id,
+    lb.numero_lote,
+    lb.estado,
+    lb.fecha_compra,
+    lb.fecha_recepcion,
+    lb.unidades_compradas,
+    lb.unidades_disponibles,
+    COALESCE(vl.unidades_vendidas, 0) AS unidades_vendidas,
+    (lb.costo_mercaderia_bs + lb.costos_adicionales_bs) AS costo_total_inversion,
+    COALESCE(vl.ventas_totales_bs, 0) AS ventas_totales,
+    COALESCE(vl.costo_ventas_bs, 0) AS costo_ventas,
+    (COALESCE(vl.ventas_totales_bs, 0) - COALESCE(vl.costo_ventas_bs, 0)) AS utilidad_real,
+    CASE 
+        WHEN lb.unidades_compradas > 0 
+        THEN ROUND((COALESCE(vl.unidades_vendidas, 0)::numeric / lb.unidades_compradas::numeric) * 100, 2)
+        ELSE 0 
+    END AS porcentaje_vendido,
+    CASE 
+        WHEN (lb.costo_mercaderia_bs + lb.costos_adicionales_bs) > 0 
+        THEN ROUND(((COALESCE(vl.ventas_totales_bs, 0) - COALESCE(vl.costo_ventas_bs, 0)) / (lb.costo_mercaderia_bs + lb.costos_adicionales_bs)) * 100, 2)
+        ELSE 0 
+    END AS roi_porcentaje
+FROM lotes_base lb
+LEFT JOIN ventas_lote vl ON vl.lote_id = lb.lote_id;
 
 
 -- ============================================================
@@ -2796,6 +2820,27 @@ TO authenticated
 USING (es_admin())
 WITH CHECK (es_admin());
 
+CREATE POLICY "admin_all_vendedores"
+ON vendedores
+FOR ALL
+TO authenticated
+USING (es_admin())
+WITH CHECK (es_admin());
+
+CREATE POLICY "admin_all_canales"
+ON canales_venta
+FOR ALL
+TO authenticated
+USING (es_admin())
+WITH CHECK (es_admin());
+
+CREATE POLICY "admin_all_tipos_entrega"
+ON tipos_entrega
+FOR ALL
+TO authenticated
+USING (es_admin())
+WITH CHECK (es_admin());
+
 
 -- ============================================================
 -- 54. PERMISOS RPC
@@ -2904,6 +2949,35 @@ ON entregas FOR SELECT TO authenticated
 USING (es_admin() OR EXISTS (
     SELECT 1 FROM pedidos p WHERE p.id = entregas.pedido_id AND p.vendedor_id = vendedor_actual()
 ));
+
+CREATE POLICY "authenticated_insert_entregas"
+ON entregas FOR INSERT TO authenticated
+WITH CHECK (
+  es_admin() OR EXISTS (
+    SELECT 1 FROM pedidos p WHERE p.id = entregas.pedido_id AND p.vendedor_id = vendedor_actual()
+  )
+);
+
+CREATE POLICY "authenticated_update_entregas"
+ON entregas FOR UPDATE TO authenticated
+USING (
+  es_admin() OR EXISTS (
+    SELECT 1 FROM pedidos p WHERE p.id = entregas.pedido_id AND p.vendedor_id = vendedor_actual()
+  )
+)
+WITH CHECK (
+  es_admin() OR EXISTS (
+    SELECT 1 FROM pedidos p WHERE p.id = entregas.pedido_id AND p.vendedor_id = vendedor_actual()
+  )
+);
+
+CREATE POLICY "authenticated_delete_entregas"
+ON entregas FOR DELETE TO authenticated
+USING (
+  es_admin() OR EXISTS (
+    SELECT 1 FROM pedidos p WHERE p.id = entregas.pedido_id AND p.vendedor_id = vendedor_actual()
+  )
+);
 
 CREATE POLICY "authenticated_read_clientes"
 ON clientes FOR SELECT TO authenticated

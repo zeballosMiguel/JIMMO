@@ -35,21 +35,21 @@ Liberar una reserva hace la operación inversa.
 
 Una asignación FIFO histórica no debe eliminarse simplemente para ocultar una modificación/cancelación. Se conserva y se marca inactiva cuando deja de representar una asignación vigente.
 
-## 6. Pedidos
+## 6. Pedidos y Ventas
 Estados válidos:
-`BORRADOR`, `RESERVADO`, `COMPLETADO`, `CANCELADO`.
+`RESERVADO`, `COMPLETADO`, `CANCELADO` (No existe estado BORRADOR; toda venta descuenta/compromete stock de inmediato).
+
+Modalidades de creación:
+- **Venta Inmediata / Directa (`COMPLETADO`)**: Se cobra el total al momento, liquida el stock definitivamente (SALIDA_VENTA FIFO).
+- **Reserva con Adelanto (`RESERVADO`)**: Cuando el cliente pasa por tienda física y deja un anticipo/adelanto. Aparta las prendas de inmediato (FIFO reservado) y genera saldo pendiente por cobrar.
 
 Transiciones principales:
-- BORRADOR → RESERVADO
-- BORRADOR → COMPLETADO
-- RESERVADO → COMPLETADO
-- BORRADOR → CANCELADO
-- RESERVADO → CANCELADO
+- RESERVADO → COMPLETADO (al liquidar el saldo y retirar el producto)
+- RESERVADO → CANCELADO (libera las reservas y devuelve el stock al inventario disponible)
 
 No modificar pedidos COMPLETADOS/CANCELADOS mediante `editar_pedido`.
 
 ## 7. Edición de pedidos
-En BORRADOR se pueden actualizar los datos y detalles.
 En RESERVADO, editar implica:
 1. bloquear la operación en una transacción;
 2. liberar la asignación/reserva anterior;
