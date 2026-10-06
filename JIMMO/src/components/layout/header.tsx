@@ -10,13 +10,20 @@ interface HeaderProps {
 }
 
 export function Header({ perfil }: HeaderProps) {
+  const displayName =
+    perfil.nombre && perfil.nombre.trim() !== ""
+      ? perfil.nombre
+      : perfil.email
+      ? perfil.email.split("@")[0]
+      : "Usuario";
+
   return (
     <header className="h-14 border-b border-border bg-card/80 backdrop-blur-sm flex items-center justify-between px-6 shrink-0 z-10">
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 text-sm">
           <span className="text-muted-foreground font-normal">Panel de Control</span>
           <span className="text-muted-foreground/40 font-light">•</span>
-          <span className="font-semibold text-foreground">{perfil.nombre}</span>
+          <span className="font-semibold text-foreground">{displayName}</span>
         </div>
         <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-100 text-zinc-800 border border-zinc-200 capitalize">
           {perfil.rol === "admin" ? (

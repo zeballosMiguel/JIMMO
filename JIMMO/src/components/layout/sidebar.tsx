@@ -162,22 +162,34 @@ export function Sidebar({ perfil }: SidebarProps) {
       </nav>
 
       {/* User info footer */}
-      <div className={cn("py-3.5 border-t border-sidebar-border bg-black/30 transition-all duration-300", collapsed ? "px-2" : "px-4")}>
-        <div className={cn("flex items-center gap-2.5", collapsed && "justify-center")}>
-          <div
-            className="w-8 h-8 rounded-full bg-zinc-800 text-white flex items-center justify-center text-xs font-bold shrink-0 border border-zinc-700"
-            title={collapsed ? `${perfil.nombre} (${perfil.email})` : undefined}
-          >
-            {perfil.nombre.charAt(0).toUpperCase()}
-          </div>
-          {!collapsed && (
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-white truncate">{perfil.nombre}</p>
-              <p className="text-[11px] text-zinc-400 truncate">{perfil.email}</p>
+      {(() => {
+        const displayName =
+          perfil.nombre && perfil.nombre.trim() !== ""
+            ? perfil.nombre
+            : perfil.email
+            ? perfil.email.split("@")[0]
+            : "Usuario";
+        const initial = displayName.charAt(0).toUpperCase();
+
+        return (
+          <div className={cn("py-3.5 border-t border-sidebar-border bg-black/30 transition-all duration-300", collapsed ? "px-2" : "px-4")}>
+            <div className={cn("flex items-center gap-2.5", collapsed && "justify-center")}>
+              <div
+                className="w-8 h-8 rounded-full bg-zinc-800 text-white flex items-center justify-center text-xs font-bold shrink-0 border border-zinc-700"
+                title={collapsed ? `${displayName} (${perfil.email})` : undefined}
+              >
+                {initial}
+              </div>
+              {!collapsed && (
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-white truncate">{displayName}</p>
+                  <p className="text-[11px] text-zinc-400 truncate">{perfil.email}</p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        );
+      })()}
     </aside>
   );
 }
