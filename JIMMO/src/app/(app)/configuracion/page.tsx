@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+
 import {
   SucursalDialog,
   CanalDialog,
@@ -37,10 +38,10 @@ export default async function ConfiguracionPage() {
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
-      <div>
+      <div className="border-b border-border pb-4">
         <h1 className="text-2xl font-bold tracking-tight">Configuración y Catálogos Auxiliares</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Administra las sucursales, canales de venta, equipo de vendedores e inversionistas.
+          Administra sucursales, canales de venta, vendedores e inversionistas.
         </p>
       </div>
 

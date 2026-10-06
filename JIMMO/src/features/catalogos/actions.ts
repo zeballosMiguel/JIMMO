@@ -563,7 +563,16 @@ export async function crearVendedor(formData: FormData) {
   const supabase = await createClient();
   const { error } = await supabase.from("vendedores").insert(parsed.data);
   if (error) return { error: error.message };
+
+  if (parsed.data.perfil_id && parsed.data.nombre) {
+    await supabase
+      .from("perfiles")
+      .update({ nombre: parsed.data.nombre })
+      .eq("id", parsed.data.perfil_id);
+  }
+
   revalidatePath("/configuracion");
+  revalidatePath("/", "layout");
   return { success: true };
 }
 
@@ -591,7 +600,17 @@ export async function actualizarVendedor(id: string, formData: FormData) {
     .update(parsed.data)
     .eq("id", id);
   if (error) return { error: error.message };
+
+  // Si tiene un perfil_id vinculado, actualizamos también el nombre en la tabla perfiles
+  if (parsed.data.perfil_id && parsed.data.nombre) {
+    await supabase
+      .from("perfiles")
+      .update({ nombre: parsed.data.nombre })
+      .eq("id", parsed.data.perfil_id);
+  }
+
   revalidatePath("/configuracion");
+  revalidatePath("/", "layout");
   return { success: true };
 }
 
@@ -823,4 +842,3 @@ export async function eliminarInversionista(id: string) {
   revalidatePath("/retiros");
   return { success: true };
 }
-
