@@ -39,11 +39,11 @@ export default async function CatalogosPage() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      {/* ── Header ──────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+      {/* ── Header ─────────────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Catálogo</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Catálogo</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Todos tus productos, variantes y colores en un vistazo.
           </p>
         </div>
@@ -59,63 +59,63 @@ export default async function CatalogosPage() {
         </div>
       </div>
 
-      {/* ── Stat Cards ──────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* ── Stat Cards ────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
         {/* Productos */}
-        <div className="bg-card border border-border/80 rounded-2xl p-4 shadow-sm flex flex-col gap-3 hover:border-primary/30 transition-colors">
+        <div className="px-5 py-5 rounded-xl border-2 border-border bg-card shadow-2xs hover:border-primary/30 transition-all flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Productos activos
             </span>
-            <span className="p-1.5 rounded-lg bg-primary/10">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
               <Package className="w-4 h-4 text-primary" />
-            </span>
+            </div>
           </div>
           <div>
-            <p className="text-3xl font-bold tracking-tight text-foreground">
+            <p className="text-4xl font-extrabold tracking-tight text-foreground">
               {totalProductos}
             </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-xs text-muted-foreground mt-1">
               En {totalCategorias} categoría{totalCategorias !== 1 ? "s" : ""}
             </p>
           </div>
         </div>
 
         {/* Variantes / SKUs */}
-        <div className="bg-card border border-border/80 rounded-2xl p-4 shadow-sm flex flex-col gap-3 hover:border-violet-400/40 transition-colors">
+        <div className="px-5 py-5 rounded-xl border-2 border-border bg-card shadow-2xs hover:border-violet-400/40 transition-all flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Variantes / SKUs
             </span>
-            <span className="p-1.5 rounded-lg bg-violet-500/10">
+            <div className="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
               <Layers className="w-4 h-4 text-violet-500" />
-            </span>
+            </div>
           </div>
           <div>
-            <p className="text-3xl font-bold tracking-tight text-foreground">
+            <p className="text-4xl font-extrabold tracking-tight text-foreground">
               {totalVariantes ?? 0}
             </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-xs text-muted-foreground mt-1">
               Distribuidos en colores y tallas
             </p>
           </div>
         </div>
 
         {/* Categorías */}
-        <div className="bg-card border border-border/80 rounded-2xl p-4 shadow-sm flex flex-col gap-3 hover:border-amber-400/40 transition-colors">
+        <div className="px-5 py-5 rounded-xl border-2 border-border bg-card shadow-2xs hover:border-amber-400/40 transition-all flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Categorías
             </span>
-            <span className="p-1.5 rounded-lg bg-amber-500/10">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
               <Tag className="w-4 h-4 text-amber-500" />
-            </span>
+            </div>
           </div>
           <div>
-            <p className="text-3xl font-bold tracking-tight text-foreground">
+            <p className="text-4xl font-extrabold tracking-tight text-foreground">
               {totalCategorias}
             </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-xs text-muted-foreground mt-1">
               {totalCategorias === 0
                 ? "Sin categorías creadas"
                 : `Promedio ${totalCategorias > 0 ? Math.round(totalProductos / totalCategorias) : 0} producto${totalProductos !== 1 ? "s" : ""} c/u`}

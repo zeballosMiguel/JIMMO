@@ -3,8 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Wallet, QrCode, CreditCard, DollarSign, CheckCircle2, AlertCircle } from "lucide-react";
+import { Wallet, QrCode, DollarSign, CreditCard } from "lucide-react";
 
 export const metadata = { title: "Pagos y Transacciones" };
 
@@ -46,79 +45,89 @@ export default async function PagosPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Historial de Pagos</h1>
-          <p className="text-muted-foreground text-sm mt-1">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Historial de Pagos</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">
             {pagos?.length ?? 0} transacciones registradas en el sistema.
           </p>
         </div>
       </div>
 
       {/* Cards de Resumen Visual */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="bg-card border border-border/80 shadow-xs">
-          <CardHeader className="pb-1 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <div className="px-5 py-5 rounded-xl border-2 border-border bg-card shadow-2xs hover:border-emerald-400/50 transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Total Recaudado
-            </CardTitle>
-            <DollarSign className="w-4 h-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-black text-foreground tabular-nums">
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 dark:bg-emerald-500/10 dark:border-emerald-500/20 flex items-center justify-center">
+              <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl font-extrabold tracking-tight text-foreground tabular-nums">
               Bs {totalRecaudado.toLocaleString("es-VE", { minimumFractionDigits: 2 })}
             </p>
-          </CardContent>
-        </Card>
+            <p className="text-xs text-muted-foreground mt-1">Total de pagos confirmados</p>
+          </div>
+        </div>
 
-        <Card className="bg-card border border-border/80 shadow-xs">
-          <CardHeader className="pb-1 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+        <div className="px-5 py-5 rounded-xl border-2 border-border bg-card shadow-2xs hover:border-primary/30 transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Cobrado en Efectivo
-            </CardTitle>
-            <Wallet className="w-4 h-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-black text-foreground tabular-nums">
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-zinc-100 border border-zinc-200 dark:bg-zinc-800/80 dark:border-zinc-700/60 flex items-center justify-center">
+              <Wallet className="w-4 h-4 text-zinc-900 dark:text-zinc-100" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl font-extrabold tracking-tight text-foreground tabular-nums">
               Bs {pagosEnEfectivo.toLocaleString("es-VE", { minimumFractionDigits: 2 })}
             </p>
-          </CardContent>
-        </Card>
+            <p className="text-xs text-muted-foreground mt-1">Ingresos en efectivo</p>
+          </div>
+        </div>
 
-        <Card className="bg-card border border-border/80 shadow-xs">
-          <CardHeader className="pb-1 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+        <div className="px-5 py-5 rounded-xl border-2 border-border bg-card shadow-2xs hover:border-indigo-400/50 transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Cobrado por QR / Banco
-            </CardTitle>
-            <QrCode className="w-4 h-4 text-indigo-500" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-black text-foreground tabular-nums">
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 dark:bg-indigo-500/10 dark:border-indigo-500/20 flex items-center justify-center">
+              <QrCode className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl font-extrabold tracking-tight text-foreground tabular-nums">
               Bs {pagosEnQR.toLocaleString("es-VE", { minimumFractionDigits: 2 })}
             </p>
-          </CardContent>
-        </Card>
+            <p className="text-xs text-muted-foreground mt-1">Transferencias y pagos digitales</p>
+          </div>
+        </div>
       </div>
 
       {/* Tabla de Pagos */}
-      <div className="rounded-xl border border-border overflow-hidden bg-card shadow-xs">
+      <div className="rounded-2xl border border-border overflow-hidden bg-card shadow-2xs">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Fecha de Pago</TableHead>
-              <TableHead>Nro. Pedido</TableHead>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Método de Pago</TableHead>
-              <TableHead className="text-right">Monto</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead className="text-right">Acción</TableHead>
+            <TableRow className="bg-muted/40 hover:bg-muted/40">
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Fecha de Pago</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nro. Pedido</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Cliente</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Método de Pago</TableHead>
+              <TableHead className="text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Monto</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Estado</TableHead>
+              <TableHead className="text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Acción</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {!pagos?.length ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
-                  No hay transacciones ni pagos registrados aún.
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-12">
+                  <CreditCard className="w-8 h-8 mx-auto opacity-30 mb-2" />
+                  <p className="text-sm font-medium text-foreground">No hay transacciones ni pagos registrados aún.</p>
                 </TableCell>
               </TableRow>
             ) : (
@@ -128,7 +137,7 @@ export default async function PagosPage() {
                 const esEfectivo = p.metodo?.toUpperCase().includes("EFECTIVO");
 
                 return (
-                  <TableRow key={p.id} className="hover:bg-muted/30 transition-colors">
+                  <TableRow key={p.id} className="hover:bg-muted/20 transition-colors">
                     <TableCell className="font-medium text-foreground text-xs">
                       {new Date(p.fecha_pago).toLocaleDateString("es-VE", {
                         day: "2-digit",

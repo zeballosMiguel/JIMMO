@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
-import { Plus, Pencil, ShoppingBag } from "lucide-react";
+import { Plus, Pencil, ShoppingBag, Search } from "lucide-react";
 import { ExportarPedidosExcelButton } from "@/features/pedidos/components/exportar-pedidos-excel-button";
 
 export const metadata = { title: "Pedidos y Ventas" };
@@ -87,14 +87,15 @@ export default async function PedidosPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Pedidos y Ventas</h1>
-          <p className="text-muted-foreground text-sm mt-1">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Pedidos y Ventas</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">
             {pedidos?.length ?? 0} registros en el sistema.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <ExportarPedidosExcelButton estadoActual={estado} />
           <Link href="/pedidos/nuevo" id="crear-pedido-btn" className={buttonVariants({ variant: "default" })}>
             <Plus className="w-4 h-4 mr-2" />
@@ -103,59 +104,85 @@ export default async function PedidosPage({
         </div>
       </div>
 
-      {/* Filtros */}
-      <form className="flex gap-2 flex-wrap">
-        <Link
-          href="/pedidos"
-          className={`px-3 py-1.5 rounded-md text-sm font-medium border transition-colors ${
-            !estado ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:border-primary"
-          }`}
-          id="filtro-todos"
-        >
-          Todos
-        </Link>
-        {estados.map((e) => (
+      {/* Filtros + Buscador */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex gap-2 flex-wrap">
           <Link
-            key={e}
-            href={`/pedidos?estado=${e}`}
-            id={`filtro-${e.toLowerCase()}`}
+            href="/pedidos"
             className={`px-3 py-1.5 rounded-md text-sm font-medium border transition-colors ${
-              estado === e ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:border-primary"
+              !estado ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:border-primary"
             }`}
+            id="filtro-todos"
           >
-            {e}
+            Todos
           </Link>
-        ))}
-      </form>
+          {estados.map((e) => (
+            <Link
+              key={e}
+              href={`/pedidos?estado=${e}${q ? `&q=${q}` : ""}`}
+              id={`filtro-${e.toLowerCase()}`}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium border transition-colors ${
+                estado === e ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:border-primary"
+              }`}
+            >
+              {e}
+            </Link>
+          ))}
+        </div>
 
-      <div className="rounded-lg border border-border overflow-hidden bg-card shadow-xs">
+        {/* Buscador estilo Lotes */}
+        <form className="flex items-center gap-2">
+          <div className="relative w-full sm:w-72">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <input
+              type="search"
+              name="q"
+              defaultValue={q}
+              placeholder="Buscar cliente o vendedor..."
+              className="flex h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              id="pedidos-search"
+            />
+          </div>
+          {(estado || q) && (
+            <Link
+              href="/pedidos"
+              className="text-xs text-muted-foreground hover:text-foreground font-medium shrink-0"
+            >
+              Limpiar
+            </Link>
+          )}
+        </form>
+      </div>
+
+      <div className="rounded-2xl border border-border overflow-hidden bg-card shadow-2xs">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead className="w-16">Nro.</TableHead>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Vendedor</TableHead>
-              <TableHead className="min-w-[260px]">Lo que se vendió (Prendas / Items)</TableHead>
-              <TableHead>Canal</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-              <TableHead className="text-right">Pagado</TableHead>
-              <TableHead className="text-right">Saldo</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead className="text-right">Acción</TableHead>
+            <TableRow className="bg-muted/40 hover:bg-muted/40">
+              <TableHead className="w-16 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nro.</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Cliente</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Vendedor</TableHead>
+              <TableHead className="min-w-[260px] text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Lo que se vendió</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Canal</TableHead>
+              <TableHead className="text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total</TableHead>
+              <TableHead className="text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pagado</TableHead>
+              <TableHead className="text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Saldo</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Estado</TableHead>
+              <TableHead className="text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Acción</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {!pedidos?.length ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
-                  No hay ventas o pedidos en este filtro.
+                <TableCell colSpan={10} className="text-center text-muted-foreground py-12">
+                  <ShoppingBag className="w-8 h-8 mx-auto opacity-30 mb-2" />
+                  <p className="text-sm font-medium text-foreground">No hay ventas o pedidos en este filtro.</p>
                 </TableCell>
               </TableRow>
             ) : (
               pedidos.map((p) => {
                 const items = itemsByPedido[p.id] || [];
                 return (
-                  <TableRow key={p.id} className="hover:bg-muted/30 transition-colors">
+                  <TableRow key={p.id} className="hover:bg-muted/20 transition-colors">
                     <TableCell className="font-mono font-bold align-top pt-3">
                       #{p.numero}
                     </TableCell>

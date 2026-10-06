@@ -77,11 +77,11 @@ export function RetirosStats({
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
       {cards.map((c) => (
         <div
           key={c.label}
-          className="relative rounded-xl border border-border bg-card p-5 shadow-xs hover:border-zinc-300 transition-colors overflow-hidden"
+          className={`px-5 py-5 rounded-xl border-2 border-border bg-card shadow-2xs hover:border-zinc-300 dark:hover:border-zinc-600 transition-all overflow-hidden relative`}
         >
           {/* Header */}
           <div className="flex items-start justify-between mb-3">
@@ -105,7 +105,7 @@ export function RetirosStats({
 
           {/* Badge */}
           {c.badge && (
-            <span className="absolute top-5 right-14 text-[10px] font-semibold text-muted-foreground bg-zinc-100 border border-zinc-200 px-1.5 py-0.5 rounded">
+            <span className="absolute top-5 right-14 text-[10px] font-semibold text-muted-foreground bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-1.5 py-0.5 rounded">
               {c.badge}
             </span>
           )}

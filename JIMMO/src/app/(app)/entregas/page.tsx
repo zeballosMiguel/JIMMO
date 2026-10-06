@@ -5,7 +5,6 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { EntregaEliminarButton } from "@/features/entregas/components/entrega-eliminar-button";
 import { EstadoEntregaSelect } from "@/features/entregas/estado-entrega-select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Truck, MapPin, CheckCircle2, Clock, Calendar } from "lucide-react";
 
 export const metadata = { title: "Entregas" };
@@ -34,64 +33,75 @@ export default async function EntregasPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Entregas y Despachos</h1>
-          <p className="text-muted-foreground text-sm mt-1">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Entregas y Despachos</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">
             Control logístico de envíos y paquetes a clientes.
           </p>
         </div>
       </div>
 
       {/* Cards de Resumen */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Card className="bg-card border border-border/80 shadow-xs">
-          <CardHeader className="pb-1 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        <div className="px-5 py-5 rounded-xl border-2 border-border bg-card shadow-2xs hover:border-amber-400/50 transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">
               Pendientes por Entregar
-            </CardTitle>
-            <Clock className="w-4 h-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-black text-amber-600 tabular-nums">
-              {totalPendientes} {totalPendientes === 1 ? "despacho" : "despachos"}
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-100 dark:bg-amber-500/10 dark:border-amber-500/20 flex items-center justify-center">
+              <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline justify-between">
+            <p className="text-4xl font-extrabold tracking-tight text-amber-700 dark:text-amber-400">
+              {totalPendientes}
             </p>
-          </CardContent>
-        </Card>
+            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+              {totalPendientes === 1 ? "despacho" : "despachos"}
+            </span>
+          </div>
+        </div>
 
-        <Card className="bg-card border border-border/80 shadow-xs">
-          <CardHeader className="pb-1 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+        <div className="px-5 py-5 rounded-xl border-2 border-border bg-card shadow-2xs hover:border-emerald-400/50 transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
               Entregados / Dejados
-            </CardTitle>
-            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-black text-emerald-600 tabular-nums">
-              {totalEntregados} {totalEntregados === 1 ? "entrega" : "entregas"}
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 dark:bg-emerald-500/10 dark:border-emerald-500/20 flex items-center justify-center">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline justify-between">
+            <p className="text-4xl font-extrabold tracking-tight text-emerald-700 dark:text-emerald-400">
+              {totalEntregados}
             </p>
-          </CardContent>
-        </Card>
+            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+              {totalEntregados === 1 ? "entrega" : "entregas"}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Tabla de Entregas */}
-      <div className="rounded-xl border border-border overflow-hidden bg-card shadow-xs">
+      <div className="rounded-2xl border border-border overflow-hidden bg-card shadow-2xs">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Nro. Pedido</TableHead>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Destino / Transporte</TableHead>
-              <TableHead>Fecha Programada</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead className="text-right">Acción</TableHead>
+            <TableRow className="bg-muted/40 hover:bg-muted/40">
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nro. Pedido</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Cliente</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Destino / Transporte</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Fecha Programada</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Estado</TableHead>
+              <TableHead className="text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Acción</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {!entregas?.length ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
-                  No hay entregas o despachos registrados.
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-12">
+                  <Truck className="w-8 h-8 mx-auto opacity-30 mb-2" />
+                  <p className="text-sm font-medium text-foreground">No hay entregas o despachos registrados.</p>
                 </TableCell>
               </TableRow>
             ) : (
@@ -107,7 +117,7 @@ export default async function EntregasPage() {
                   "—";
 
                 return (
-                  <TableRow key={e.id} className="hover:bg-muted/30 transition-colors">
+                  <TableRow key={e.id} className="hover:bg-muted/20 transition-colors">
                     <TableCell className="font-mono font-bold text-xs">
                       {pedido ? (
                         <Link

@@ -65,12 +65,12 @@ function EliminarRetiroBtn({ id }: { id: string }) {
 
 export function RetirosTable({ retiros, sumaFiltrada }: RetirosTableProps) {
   return (
-    <div className="rounded-xl border border-border bg-card shadow-xs overflow-hidden">
+    <div className="rounded-2xl border border-border bg-card shadow-2xs overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-border">
         <div className="flex items-center gap-3">
           <h2 className="text-sm font-bold text-foreground">Historial de Egresos y Retiros</h2>
-          <span className="text-[11px] text-muted-foreground bg-zinc-100 border border-zinc-200 px-2 py-0.5 rounded font-medium">
+          <span className="text-[11px] text-muted-foreground bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2 py-0.5 rounded font-medium">
             {retiros.length} transaccion{retiros.length !== 1 ? "es" : ""}
           </span>
         </div>
@@ -85,13 +85,13 @@ export function RetirosTable({ retiros, sumaFiltrada }: RetirosTableProps) {
       {/* Table */}
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead className="w-[110px]">FECHA</TableHead>
-            <TableHead className="text-right">MONTO</TableHead>
-            <TableHead>ORIGEN</TableHead>
-            <TableHead>DESTINO / SOLICITANTE</TableHead>
-            <TableHead>DETALLE DEL EGRESO</TableHead>
-            <TableHead className="text-right w-[80px]">ACCIÓN</TableHead>
+          <TableRow className="bg-muted/40 hover:bg-muted/40">
+            <TableHead className="w-[110px] text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">FECHA</TableHead>
+            <TableHead className="text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">MONTO</TableHead>
+            <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">ORIGEN</TableHead>
+            <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">DESTINO / SOLICITANTE</TableHead>
+            <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">DETALLE DEL EGRESO</TableHead>
+            <TableHead className="text-right w-[80px] text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">ACCIÓN</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -105,7 +105,7 @@ export function RetirosTable({ retiros, sumaFiltrada }: RetirosTableProps) {
             retiros.map((r) => {
               const badge = origenBadge[r.origen];
               return (
-                <TableRow key={r.id} className="hover:bg-zinc-50/50">
+                <TableRow key={r.id} className="hover:bg-muted/20">
                   <TableCell className="tabular-nums text-sm">
                     {new Date(r.fecha).toLocaleDateString("es-VE", {
                       day: "2-digit",
