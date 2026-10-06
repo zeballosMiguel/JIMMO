@@ -4,6 +4,7 @@ import { RetirosStats } from "@/features/retiros/components/retiros-stats";
 import { RetirosFilters } from "@/features/retiros/components/retiros-filters";
 import { RetirosTable, type RetiroRow } from "@/features/retiros/components/retiros-table";
 import { NuevoRetiroDialog } from "@/features/retiros/components/nuevo-retiro-dialog";
+import { RefreshButton } from "@/components/ui/refresh-button";
 import { Suspense } from "react";
 
 export const metadata = { title: "Retiros" };
@@ -126,7 +127,10 @@ export default async function RetirosPage({ searchParams }: Props) {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Retiros</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Retiros</h1>
+            <RefreshButton />
+          </div>
           <p className="text-muted-foreground text-sm mt-0.5">
             Gestión de egresos, retiros de capital y utilidad.
           </p>

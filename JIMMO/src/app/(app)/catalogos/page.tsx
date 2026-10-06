@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Package, Tag, Layers } from "lucide-react";
 import { ProductoTodoEnUnoDialog } from "@/features/catalogos/components/producto-todo-en-uno-dialog";
 import { CatalogoHub } from "@/features/catalogos/components/catalogo-hub";
+import { RefreshButton } from "@/components/ui/refresh-button";
 import Link from "next/link";
 
 export const metadata = { title: "Catálogo" };
@@ -42,7 +43,10 @@ export default async function CatalogosPage() {
       {/* ── Header ─────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Catálogo</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Catálogo</h1>
+            <RefreshButton />
+          </div>
           <p className="text-sm text-muted-foreground mt-0.5">
             Todos tus productos, variantes y colores en un vistazo.
           </p>

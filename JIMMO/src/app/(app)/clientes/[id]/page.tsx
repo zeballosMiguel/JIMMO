@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { EditarClienteDialog } from "@/features/clientes/editar-cliente-dialog";
+import { RefreshButton } from "@/components/ui/refresh-button";
 import Link from "next/link";
 import { ArrowLeft, User, Phone, Mail, MapPin, Plus } from "lucide-react";
 
@@ -18,15 +19,29 @@ export default async function ClienteDetallePage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: cliente }, { data: pedidos }] = await Promise.all([
+  const [{ data: cliente }, { data: pedidosRaw }] = await Promise.all([
     supabase.from("clientes").select("*").eq("id", id).single(),
-    supabase.from("vw_pedidos").select("*").eq("cliente_id", id).order("created_at", { ascending: false }),
+    supabase.from("pedidos").select("*, vendedores(nombre), pagos(monto, estado)").eq("cliente_id", id).order("created_at", { ascending: false }),
   ]);
 
   if (!cliente) notFound();
 
-  const totalComprado = (pedidos || []).reduce((acc, p) => acc + Number(p.total || 0), 0);
-  const saldoTotal = (pedidos || []).reduce((acc, p) => acc + Number(p.saldo || 0), 0);
+  const pedidos = (pedidosRaw || []).map((p) => {
+    const totalPagado = (p.pagos || [])
+      .filter((pg: any) => pg.estado === "PAGADO")
+      .reduce((acc: number, pg: any) => acc + Number(pg.monto || 0), 0);
+    const saldo = Math.max(0, Number(p.total || 0) - totalPagado);
+    const vendedor = (p.vendedores as any)?.nombre ?? null;
+    return {
+      ...p,
+      vendedor,
+      total_pagado: totalPagado,
+      saldo,
+    };
+  });
+
+  const totalComprado = pedidos.reduce((acc, p) => acc + Number(p.total || 0), 0);
+  const saldoTotal = pedidos.reduce((acc, p) => acc + Number(p.saldo || 0), 0);
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -37,7 +52,10 @@ export default async function ClienteDetallePage({
             <ArrowLeft className="w-5 h-5 text-muted-foreground" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{cliente.nombre}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight">{cliente.nombre}</h1>
+              <RefreshButton />
+            </div>
             <p className="text-muted-foreground text-sm mt-0.5">
               Cliente desde {new Date(cliente.created_at).toLocaleDateString("es-BO")}
             </p>

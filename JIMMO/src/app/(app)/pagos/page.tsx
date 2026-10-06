@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { Wallet, QrCode, DollarSign, CreditCard } from "lucide-react";
+import { RefreshButton } from "@/components/ui/refresh-button";
 
 export const metadata = { title: "Pagos y Transacciones" };
 
@@ -47,7 +48,10 @@ export default async function PagosPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Historial de Pagos</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Historial de Pagos</h1>
+            <RefreshButton />
+          </div>
           <p className="text-muted-foreground text-sm mt-0.5">
             {pagos?.length ?? 0} transacciones registradas en el sistema.
           </p>

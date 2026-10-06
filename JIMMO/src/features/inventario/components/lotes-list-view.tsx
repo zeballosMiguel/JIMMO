@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { LoteEliminarButton } from "@/features/inventario/lote-eliminar-button";
 import { EditarLoteDialog } from "@/features/inventario/editar-lote-dialog";
+import { RefreshButton } from "@/components/ui/refresh-button";
 
 interface LotesListViewProps {
   lotes: any[];
@@ -184,7 +185,10 @@ export function LotesListView({ lotes = [], inversionistas = [] }: LotesListView
       {/* Encabezado */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Lotes de Inventario y Compras</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight">Lotes de Inventario y Compras</h1>
+            <RefreshButton />
+          </div>
           <p className="text-muted-foreground text-sm mt-1">
             {totalLotesCount} compras y lotes registrados en el sistema.
           </p>

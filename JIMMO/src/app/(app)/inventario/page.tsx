@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { InventarioHub } from "@/features/inventario/components/inventario-hub";
 import { Boxes, Package, AlertTriangle, Layers } from "lucide-react";
+import { RefreshButton } from "@/components/ui/refresh-button";
 
 export const metadata = { title: "Inventario" };
 
@@ -59,9 +60,12 @@ export default async function InventarioPage() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* ── Encabezado ────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-border pb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Inventario</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight">Inventario</h1>
+            <RefreshButton />
+          </div>
           <p className="text-sm text-muted-foreground mt-1">
             Existencias físicas en tiempo real y disponibilidad por lote FIFO.
           </p>

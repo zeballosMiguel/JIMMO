@@ -11,6 +11,7 @@ import {
   PiggyBank,
   ArrowUpRight,
 } from "lucide-react";
+import { RefreshButton } from "@/components/ui/refresh-button";
 
 export const metadata = { title: "Dashboard" };
 
@@ -113,9 +114,12 @@ export default async function DashboardPage() {
       {/* Header with JIMMO accent */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Dashboard
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Dashboard
+            </h1>
+            <RefreshButton />
+          </div>
           <p className="text-muted-foreground text-sm mt-0.5">
             Resumen general y métricas clave de JIMMO.
           </p>

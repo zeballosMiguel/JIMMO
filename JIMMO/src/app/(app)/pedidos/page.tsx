@@ -6,6 +6,7 @@ import { buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
 import { Plus, Pencil, ShoppingBag, Search } from "lucide-react";
 import { ExportarPedidosExcelButton } from "@/features/pedidos/components/exportar-pedidos-excel-button";
+import { RefreshButton } from "@/components/ui/refresh-button";
 
 export const metadata = { title: "Pedidos y Ventas" };
 
@@ -90,7 +91,10 @@ export default async function PedidosPage({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Pedidos y Ventas</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Pedidos y Ventas</h1>
+            <RefreshButton />
+          </div>
           <p className="text-muted-foreground text-sm mt-0.5">
             {pedidos?.length ?? 0} registros en el sistema.
           </p>

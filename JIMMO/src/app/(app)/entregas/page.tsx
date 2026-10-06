@@ -6,6 +6,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { EntregaEliminarButton } from "@/features/entregas/components/entrega-eliminar-button";
 import { EstadoEntregaSelect } from "@/features/entregas/estado-entrega-select";
 import { Truck, MapPin, CheckCircle2, Clock, Calendar } from "lucide-react";
+import { RefreshButton } from "@/components/ui/refresh-button";
 
 export const metadata = { title: "Entregas" };
 
@@ -35,7 +36,10 @@ export default async function EntregasPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Entregas y Despachos</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Entregas y Despachos</h1>
+            <RefreshButton />
+          </div>
           <p className="text-muted-foreground text-sm mt-0.5">
             Control logístico de envíos y paquetes a clientes.
           </p>
