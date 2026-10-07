@@ -12,6 +12,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { RefreshButton } from "@/components/ui/refresh-button";
+import { CanalDonut } from "@/features/dashboard/components/canal-donut";
 
 export const metadata = { title: "Dashboard" };
 
@@ -32,6 +33,7 @@ async function getDashboardData() {
     { data: ventasMesData },
     { data: rentabilidadGlobal },
     { data: retirosGlobal },
+    { data: canalesMesRaw },
   ] = await Promise.all([
     supabase
       .from("pedidos")
@@ -63,6 +65,12 @@ async function getDashboardData() {
       .from("retiros")
       .select("monto, origen, created_at")
       .gte("created_at", inicioMes),
+    // Pedidos del mes agrupados por canal
+    supabase
+      .from("pedidos")
+      .select("canal_id, canales_venta(nombre)")
+      .gte("created_at", inicioMes)
+      .not("canal_id", "is", null),
   ]);
 
   // Cálculo financiero
@@ -85,6 +93,17 @@ async function getDashboardData() {
   // Dinero en caja = Capital recuperado + utilidad generada − retiros
   const dineroEnCaja = capRecuperado + utGenerada - totalRetiros;
 
+  // Agrupar canales del mes
+  const canalCounts = new Map<string, number>();
+  for (const p of canalesMesRaw ?? []) {
+    const nombre = (p as any).canales_venta?.nombre ?? "Sin canal";
+    canalCounts.set(nombre, (canalCounts.get(nombre) ?? 0) + 1);
+  }
+  const totalPedidosConCanal = Array.from(canalCounts.values()).reduce((s, v) => s + v, 0);
+  const canalesMes = Array.from(canalCounts.entries())
+    .map(([nombre, cantidad]) => ({ nombre, cantidad, pct: totalPedidosConCanal > 0 ? Math.round((cantidad / totalPedidosConCanal) * 100) : 0 }))
+    .sort((a, b) => b.cantidad - a.cantidad);
+
   return {
     totalPedidos: totalPedidos ?? 0,
     totalClientes: totalClientes ?? 0,
@@ -93,6 +112,7 @@ async function getDashboardData() {
     ventasMes,
     utilidadMes,
     dineroEnCaja,
+    canalesMes,
   };
 }
 
@@ -243,65 +263,85 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Recent orders */}
-      <Card className="border border-border shadow-xs">
-        <CardHeader className="flex flex-row items-center justify-between border-b border-border pb-3">
-          <div>
-            <CardTitle className="text-base font-bold text-foreground">Pedidos Recientes</CardTitle>
-            <p className="text-xs text-muted-foreground">Últimos movimientos registrados en el sistema.</p>
-          </div>
-          <Link
-            href="/pedidos"
-            className="text-xs font-semibold text-red-600 hover:text-red-700 flex items-center gap-1 transition-colors"
-          >
-            Ver todos <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </CardHeader>
-        <CardContent className="pt-4">
-          {data.pedidosRecientes.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              No hay pedidos registrados aún.
-            </p>
-          ) : (
-            <div className="divide-y divide-border">
-              {data.pedidosRecientes.map((p) => (
-                <div
-                  key={p.id}
-                  className="flex items-center justify-between py-3 hover:bg-zinc-50/50 px-2 rounded-lg transition-colors"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="font-mono text-xs font-bold text-zinc-900 bg-zinc-100 px-2 py-1 rounded border border-zinc-200">
-                      #{p.numero}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">
-                        {p.cliente ?? "Cliente Ocasional"}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        Vendido por: <span className="text-foreground font-medium">{p.vendedor}</span>
-                      </p>
+      {/* Bottom row: Pedidos Recientes + Ventas por Canal */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:items-start">
+        {/* Pedidos Recientes — ocupa 3/5 */}
+        <Card className="lg:col-span-3 border border-border shadow-xs">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-border pb-3">
+            <div>
+              <CardTitle className="text-base font-bold text-foreground">Pedidos Recientes</CardTitle>
+              <p className="text-xs text-muted-foreground">Últimos movimientos registrados en el sistema.</p>
+            </div>
+            <Link
+              href="/pedidos"
+              className="text-xs font-semibold text-red-600 hover:text-red-700 flex items-center gap-1 transition-colors"
+            >
+              Ver todos <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </CardHeader>
+          <CardContent className="pt-4">
+            {data.pedidosRecientes.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                No hay pedidos registrados aún.
+              </p>
+            ) : (
+              <div className="divide-y divide-border">
+                {data.pedidosRecientes.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex items-center justify-between py-3 hover:bg-zinc-50/50 px-2 rounded-lg transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="font-mono text-xs font-bold text-zinc-900 bg-zinc-100 px-2 py-1 rounded border border-zinc-200">
+                        #{p.numero}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">
+                          {p.cliente ?? "Cliente Ocasional"}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          Vendido por: <span className="text-foreground font-medium">{p.vendedor}</span>
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-sm font-extrabold text-foreground tabular-nums">
+                        Bs {Number(p.total).toLocaleString("es-VE", { minimumFractionDigits: 2 })}
+                      </span>
+                      <Badge variant={estadoBadgeVariant[p.estado] ?? "secondary"}>
+                        {p.estado}
+                      </Badge>
+                      <Link
+                        href={`/pedidos/${p.id}`}
+                        className="text-xs text-muted-foreground hover:text-red-600 font-medium ml-1"
+                      >
+                        Ver
+                      </Link>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-sm font-extrabold text-foreground tabular-nums">
-                      Bs {Number(p.total).toLocaleString("es-VE", { minimumFractionDigits: 2 })}
-                    </span>
-                    <Badge variant={estadoBadgeVariant[p.estado] ?? "secondary"}>
-                      {p.estado}
-                    </Badge>
-                    <Link
-                      href={`/pedidos/${p.id}`}
-                      className="text-xs text-muted-foreground hover:text-red-600 font-medium ml-1"
-                    >
-                      Ver
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Ventas por Canal — ocupa 2/5 */}
+        <Card className="lg:col-span-2 border border-border shadow-xs">
+          <CardHeader className="border-b border-border pb-3">
+            <CardTitle className="text-base font-bold text-foreground">Ventas por Canal</CardTitle>
+            <p className="text-xs text-muted-foreground">Distribución de pedidos este mes.</p>
+          </CardHeader>
+          <CardContent className="pt-5">
+            {data.canalesMes.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                Sin datos de canal este mes.
+              </p>
+            ) : (
+              <CanalDonut canales={data.canalesMes} />
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

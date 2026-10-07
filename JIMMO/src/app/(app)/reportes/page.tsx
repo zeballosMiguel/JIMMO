@@ -5,6 +5,7 @@ import { KpiFinancialCards } from "@/features/reportes/components/kpi-financial-
 import { VendedoresRendimiento, type VendedorRendimientoItem } from "@/features/reportes/components/vendedores-rendimiento";
 import { ProductosEstadoTable, type ProductoEstadoItem } from "@/features/reportes/components/productos-estado-table";
 import { getRangoPeriodo, type PeriodoFinanciero } from "@/features/reportes/lib/date-utils";
+import { CanalDonut } from "@/features/dashboard/components/canal-donut";
 
 export const metadata = { title: "Reporte Financiero" };
 
@@ -70,13 +71,37 @@ export default async function ReportesFinancieroPage({ searchParams }: Props) {
     retirosPeriodoQuery = retirosPeriodoQuery.lte("fecha", hasta.split("T")[0]);
   }
 
-  const [{ data: itemsPeriodo }, { data: retirosPeriodo }] = await Promise.all([
+  let canalesQuery = supabase
+    .from("pedidos")
+    .select("canal_id, canales_venta(nombre)")
+    .not("canal_id", "is", null);
+
+  if (desde) canalesQuery = canalesQuery.gte("created_at", desde);
+  if (hasta) canalesQuery = canalesQuery.lte("created_at", hasta);
+
+  const [{ data: itemsPeriodo }, { data: retirosPeriodo }, { data: canalesPeriodoRaw }] = await Promise.all([
     dpQuery,
     retirosPeriodoQuery,
+    canalesQuery,
   ]);
 
   const items = itemsPeriodo ?? [];
   const retiros = retirosPeriodo ?? [];
+
+  // Canales por período
+  const canalCountsReporte = new Map<string, number>();
+  for (const p of canalesPeriodoRaw ?? []) {
+    const nombre = (p as any).canales_venta?.nombre ?? "Sin canal";
+    canalCountsReporte.set(nombre, (canalCountsReporte.get(nombre) ?? 0) + 1);
+  }
+  const totalConCanalReporte = Array.from(canalCountsReporte.values()).reduce((s, v) => s + v, 0);
+  const canalesPeriodo = Array.from(canalCountsReporte.entries())
+    .map(([nombre, cantidad]) => ({
+      nombre,
+      cantidad,
+      pct: totalConCanalReporte > 0 ? Math.round((cantidad / totalConCanalReporte) * 100) : 0,
+    }))
+    .sort((a, b) => b.cantidad - a.cantidad);
 
   const ventasPeriodo = items.reduce((s, i) => s + Number(i.subtotal), 0);
   const utilidadPeriodo = items.reduce((s, i) => s + Number(i.utilidad), 0);
@@ -253,8 +278,27 @@ export default async function ReportesFinancieroPage({ searchParams }: Props) {
         }}
       />
 
-      {/* ── Rendimiento por Vendedor ─────────────────────────── */}
-      <VendedoresRendimiento vendedores={vendedores} />
+      {/* ── Rendimiento por Vendedor + Canales ─────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:items-start">
+        <div className="lg:col-span-3">
+          <VendedoresRendimiento vendedores={vendedores} />
+        </div>
+        <div className="lg:col-span-2">
+          <div className="bg-card border border-border rounded-xl shadow-xs">
+            <div className="px-5 pt-4 pb-3 border-b border-border">
+              <h2 className="text-base font-bold text-foreground">Pedidos por Canal</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Distribución en el período seleccionado.</p>
+            </div>
+            <div className="p-5">
+              {canalesPeriodo.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Sin datos de canal en este período.</p>
+              ) : (
+                <CanalDonut canales={canalesPeriodo} />
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* ── Estado por Producto (Auditoría) ───────────────────── */}
       <ProductosEstadoTable

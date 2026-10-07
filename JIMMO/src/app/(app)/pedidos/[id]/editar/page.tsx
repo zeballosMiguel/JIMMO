@@ -71,7 +71,7 @@ export default async function EditarPedidoPage({
         canales={canales || []}
         tiposEntrega={tiposEntrega || []}
         variantes={variantes}
-        productos={productos || []}
+        productos={(productos || []) as any}
         categorias={categorias || []}
       />
     </div>
