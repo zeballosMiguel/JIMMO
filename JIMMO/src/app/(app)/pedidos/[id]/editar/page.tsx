@@ -21,6 +21,8 @@ export default async function EditarPedidoPage({
     { data: canales },
     { data: tiposEntrega },
     { data: variantesRaw },
+    { data: productos },
+    { data: categorias },
   ] = await Promise.all([
     supabase.from("pedidos").select("*").eq("id", id).single(),
     supabase.from("detalle_pedido").select("*").eq("pedido_id", id).eq("activo", true),
@@ -30,6 +32,8 @@ export default async function EditarPedidoPage({
     supabase.from("canales_venta").select("id, nombre").eq("activo", true).order("nombre"),
     supabase.from("tipos_entrega").select("id, nombre").eq("activo", true).order("nombre"),
     supabase.from("vw_inventario").select("*"),
+    supabase.from("productos").select("id, nombre, codigo_interno, descripcion, categorias(nombre)").eq("activo", true),
+    supabase.from("categorias").select("id, nombre").order("nombre"),
   ]);
 
   if (!pedido) notFound();
@@ -41,8 +45,9 @@ export default async function EditarPedidoPage({
 
   const variantes = (variantesRaw || []).map((v: any) => ({
     id: v.variante_id,
+    producto_id: v.producto_id,
     sku: v.sku,
-    nombre_producto: v.nombre_producto,
+    nombre_producto: v.producto,
     color: v.color,
     talla: v.talla,
     precio_sugerido: v.precio_sugerido,
@@ -56,7 +61,7 @@ export default async function EditarPedidoPage({
   }));
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       <EditarPedidoForm
         pedido={pedido}
         initialItems={initialItems}
@@ -66,6 +71,8 @@ export default async function EditarPedidoPage({
         canales={canales || []}
         tiposEntrega={tiposEntrega || []}
         variantes={variantes}
+        productos={productos || []}
+        categorias={categorias || []}
       />
     </div>
   );

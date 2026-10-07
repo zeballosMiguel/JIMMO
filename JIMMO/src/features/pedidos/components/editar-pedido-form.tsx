@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { editarPedido } from "@/features/pedidos/actions";
 import { Button } from "@/components/ui/button";
@@ -9,19 +9,34 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { NuevoClienteInlineDialog } from "@/features/clientes/nuevo-cliente-inline-dialog";
-import { ClienteCombobox, ClienteOption } from "@/features/clientes/cliente-combobox";
+import { ClienteCombobox } from "@/features/clientes/cliente-combobox";
 import { toast } from "sonner";
-import { Plus, Trash2, ArrowLeft, ShieldCheck } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, ShieldCheck, Layers, ScanLine, X, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 
-interface VariantOption {
+export interface VariantOption {
   id: string;
+  producto_id?: string;
   sku: string;
   nombre_producto: string;
   color?: string | null;
   talla?: string | null;
   precio_sugerido?: number | null;
   stock_disponible: number;
+}
+
+export interface ProductoOption {
+  id: string;
+  nombre: string;
+  codigo_interno: string;
+  descripcion?: string | null;
+  categoria_id?: string | null;
+  categorias?: { id: string; nombre: string } | null;
+}
+
+export interface CategoriaOption {
+  id: string;
+  nombre: string;
 }
 
 interface SelectOption {
@@ -58,6 +73,8 @@ interface EditarPedidoFormProps {
   canales: SelectOption[];
   tiposEntrega: SelectOption[];
   variantes: VariantOption[];
+  productos?: ProductoOption[];
+  categorias?: CategoriaOption[];
 }
 
 export function EditarPedidoForm({
@@ -69,6 +86,8 @@ export function EditarPedidoForm({
   canales,
   tiposEntrega,
   variantes,
+  productos = [],
+  categorias = [],
 }: EditarPedidoFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -88,6 +107,120 @@ export function EditarPedidoForm({
       ? initialItems
       : [{ variante_id: "", cantidad: 1, precio_unitario: 0 }]
   );
+
+  // Filtros de Catálogo
+  const [activeCategory, setActiveCategory] = useState<string>("Todos");
+  const [productSearch, setProductSearch] = useState<string>("");
+
+  // Agrupar variantes por producto para el catálogo visual
+  const catalogProducts = useMemo(() => {
+    const map = new Map<string, {
+      id: string;
+      nombre: string;
+      codigo_interno: string;
+      descripcion: string;
+      categoria_nombre: string;
+      total_stock: number;
+      variantes: VariantOption[];
+    }>();
+
+    productos.forEach((p) => {
+      map.set(p.id, {
+        id: p.id,
+        nombre: p.nombre,
+        codigo_interno: p.codigo_interno || "SKU",
+        descripcion: p.descripcion || "",
+        categoria_nombre: (p as any).categorias?.nombre || "General",
+        total_stock: 0,
+        variantes: [],
+      });
+    });
+
+    variantes.forEach((v) => {
+      const pId = v.producto_id;
+      if (pId && map.has(pId)) {
+        const prod = map.get(pId)!;
+        prod.variantes.push(v);
+        prod.total_stock += v.stock_disponible || 0;
+      } else {
+        const key = v.nombre_producto || "Producto";
+        if (!map.has(key)) {
+          map.set(key, {
+            id: key,
+            nombre: v.nombre_producto,
+            codigo_interno: v.sku?.split("-")[0] || "SKU",
+            descripcion: "Prenda JIMMO",
+            categoria_nombre: "General",
+            total_stock: 0,
+            variantes: [],
+          });
+        }
+        const prod = map.get(key)!;
+        prod.variantes.push(v);
+        prod.total_stock += v.stock_disponible || 0;
+      }
+    });
+
+    return Array.from(map.values()).filter((p) => p.variantes.length > 0);
+  }, [productos, variantes]);
+
+  // Tabs de categorías
+  const categoryTabs = useMemo(() => {
+    const set = new Set<string>();
+    set.add("Todos");
+    categorias.forEach((c) => {
+      if (c.nombre) set.add(c.nombre);
+    });
+    catalogProducts.forEach((p) => {
+      if (p.categoria_nombre && p.categoria_nombre !== "General") {
+        set.add(p.categoria_nombre);
+      }
+    });
+    return Array.from(set);
+  }, [categorias, catalogProducts]);
+
+  // Productos filtrados por búsqueda y categoría
+  const filteredProducts = useMemo(() => {
+    return catalogProducts.filter((p) => {
+      const matchCategory =
+        activeCategory === "Todos" ||
+        p.categoria_nombre.toLowerCase() === activeCategory.toLowerCase();
+
+      const q = productSearch.toLowerCase().trim();
+      const matchSearch =
+        !q ||
+        p.nombre.toLowerCase().includes(q) ||
+        p.codigo_interno.toLowerCase().includes(q) ||
+        p.variantes.some(
+          (v) =>
+            v.sku.toLowerCase().includes(q) ||
+            v.color?.toLowerCase().includes(q) ||
+            v.talla?.toLowerCase().includes(q)
+        );
+
+      return matchCategory && matchSearch;
+    });
+  }, [catalogProducts, activeCategory, productSearch]);
+
+  function handleAddVariant(v: VariantOption) {
+    const existingIndex = items.findIndex((it) => it.variante_id === v.id);
+    if (existingIndex >= 0) {
+      const updated = [...items];
+      updated[existingIndex].cantidad += 1;
+      setItems(updated);
+      toast.success(`+1 ${v.nombre_producto} (${v.color}/${v.talla})`);
+    } else {
+      setItems([
+        ...items.filter((it) => it.variante_id !== ""),
+        {
+          variante_id: v.id,
+          cantidad: 1,
+          precio_unitario: Number(v.precio_sugerido || 0),
+        },
+      ]);
+      toast.success(`Agregado: ${v.nombre_producto} (${v.color}/${v.talla})`);
+    }
+  }
 
   function addItem() {
     setItems([...items, { variante_id: "", cantidad: 1, precio_unitario: 0 }]);
@@ -338,15 +471,134 @@ export function EditarPedidoForm({
         </div>
       </div>
 
+      {/* SECCIÓN DE SELECCIÓN DE PRODUCTOS INTERACTIVA */}
+      <div className="space-y-4 bg-card border border-border rounded-xl p-5 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center shrink-0 border border-rose-100">
+              <Layers className="w-4 h-4 text-rose-500" />
+            </div>
+            <div>
+              <h2 className="font-bold text-foreground text-sm sm:text-base">Catálogo &amp; Selección Rápida</h2>
+              <p className="text-xs text-muted-foreground">Haz clic en cualquier variante para agregarla o sumarla al pedido.</p>
+            </div>
+          </div>
+
+          {/* Pills de categorías */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+            {categoryTabs.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setActiveCategory(cat)}
+                className={`text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap transition-all ${
+                  activeCategory === cat
+                    ? "bg-zinc-950 text-white shadow-sm"
+                    : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Buscador de productos */}
+        <div className="relative">
+          <ScanLine className="w-5 h-5 text-rose-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Input
+            value={productSearch}
+            onChange={(e) => setProductSearch(e.target.value)}
+            placeholder="Buscar producto por nombre, SKU o color..."
+            className="pl-11 pr-4 h-11 bg-background rounded-xl border-border text-sm"
+          />
+          {productSearch && (
+            <button
+              type="button"
+              onClick={() => setProductSearch("")}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Tarjetas del catálogo */}
+        {filteredProducts.length === 0 ? (
+          <div className="py-8 text-center text-xs text-muted-foreground bg-muted/20 rounded-2xl border border-dashed border-border">
+            No se encontraron productos con el filtro aplicado.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 max-h-80 overflow-y-auto p-1 scrollbar-thin">
+            {filteredProducts.map((prod) => (
+              <div
+                key={prod.id}
+                className="bg-background border border-border/80 rounded-xl p-3 flex flex-col justify-between hover:border-zinc-400 hover:shadow-xs transition-all"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="bg-zinc-950 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      {prod.codigo_interno}
+                    </span>
+                    <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[10px] px-2 py-0.5 rounded-full">
+                      {prod.total_stock} disp.
+                    </span>
+                  </div>
+
+                  <h3 className="font-bold text-xs text-foreground mt-2 line-clamp-1">
+                    {prod.nombre}
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground line-clamp-1">
+                    {prod.categoria_nombre}
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-1.5 mt-2.5">
+                    {prod.variantes.map((v) => {
+                      const cartItem = items.find((it) => it.variante_id === v.id);
+                      const isOutOfStock = v.stock_disponible <= 0;
+                      return (
+                        <button
+                          key={v.id}
+                          type="button"
+                          disabled={isOutOfStock}
+                          onClick={() => handleAddVariant(v)}
+                          className={`text-left text-xs p-1.5 rounded-lg border transition-all flex items-center justify-between gap-1 ${
+                            isOutOfStock
+                              ? "opacity-40 cursor-not-allowed border-border/40 bg-muted/20 text-muted-foreground"
+                              : cartItem
+                              ? "border-zinc-950 bg-zinc-950 text-white shadow-xs font-semibold"
+                              : "border-border hover:border-zinc-400 bg-card text-foreground hover:bg-muted/40"
+                          }`}
+                        >
+                          <span className="truncate text-[10px]">
+                            {v.color || "Color"} / {v.talla || "U"}
+                          </span>
+                          <span className={`text-[10px] font-mono shrink-0 ${cartItem ? "text-zinc-300 font-bold" : "text-muted-foreground"}`}>
+                            {cartItem ? `x${cartItem.cantidad}` : `(${v.stock_disponible})`}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Productos / Items del Pedido */}
       <div className="space-y-4 bg-card border border-border rounded-xl p-5 shadow-sm">
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">Productos del Pedido</h2>
-            <p className="text-xs text-muted-foreground">Agrega o ajusta las variantes de producto, cantidades y precios acordados.</p>
+          <div className="flex items-center gap-2">
+            <ShoppingCart className="w-5 h-5 text-primary" />
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Productos en el Pedido</h2>
+              <p className="text-xs text-muted-foreground">Ajusta cantidades o precios unitarios acordados.</p>
+            </div>
           </div>
           <Button type="button" variant="outline" size="sm" onClick={addItem} className="gap-2">
-            <Plus className="w-4 h-4" /> Agregar Producto
+            <Plus className="w-4 h-4" /> Agregar Fila Manual
           </Button>
         </div>
 
