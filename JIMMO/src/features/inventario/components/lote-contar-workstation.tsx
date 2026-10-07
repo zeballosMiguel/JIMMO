@@ -747,14 +747,14 @@ export function LoteContarWorkstation({
                       )}
                       <span>·</span>
                       <span>
-                        Esperadas:{" "}
+                        Esp:{" "}
                         <strong className="text-foreground">
                           ~{activeStat.prod.cantidad_estimada ?? "—"} uds
                         </strong>
                       </span>
                       <span>·</span>
                       <span>
-                        Contadas:{" "}
+                        Cont:{" "}
                         <strong className="text-primary font-mono">
                           {activeStat.totalCount} uds
                         </strong>
