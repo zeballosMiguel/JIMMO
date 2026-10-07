@@ -546,11 +546,10 @@ export function DesglosarBultoDialog({
               {/* Mini barra de progreso */}
               <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
                 <div
-                  className={`h-full transition-all duration-300 ${
-                    productosContadosCount === totalProductosCount && totalProductosCount > 0
-                      ? "bg-emerald-500"
-                      : "bg-primary"
-                  }`}
+                  className={`h-full transition-all duration-300 ${productosContadosCount === totalProductosCount && totalProductosCount > 0
+                    ? "bg-emerald-500"
+                    : "bg-primary"
+                    }`}
                   style={{
                     width: `${Math.min(100, Math.round((productosContadosCount / Math.max(1, totalProductosCount)) * 100))}%`,
                   }}
@@ -577,11 +576,10 @@ export function DesglosarBultoDialog({
                         setActiveProdId(item.prod.id);
                         setIsAddingVariant(false);
                       }}
-                      className={`w-full text-left p-2.5 rounded-xl border transition-all flex items-start gap-2.5 ${
-                        isSelected
-                          ? "bg-card border-primary/50 shadow-xs ring-1 ring-primary/20"
-                          : "bg-background/60 hover:bg-muted/30 border-border/70"
-                      }`}
+                      className={`w-full text-left p-2.5 rounded-xl border transition-all flex items-start gap-2.5 ${isSelected
+                        ? "bg-card border-primary/50 shadow-xs ring-1 ring-primary/20"
+                        : "bg-background/60 hover:bg-muted/30 border-border/70"
+                        }`}
                     >
                       {/* Estado visual e Iniciales / Código Interno */}
                       <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
@@ -600,11 +598,10 @@ export function DesglosarBultoDialog({
 
                         {/* Miniatura / Avatar con código interno */}
                         <div
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center font-mono font-bold text-[11px] shrink-0 ${
-                            isSelected
-                              ? "bg-primary text-primary-foreground shadow-2xs"
-                              : "bg-muted text-muted-foreground border border-border"
-                          }`}
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center font-mono font-bold text-[11px] shrink-0 ${isSelected
+                            ? "bg-primary text-primary-foreground shadow-2xs"
+                            : "bg-muted text-muted-foreground border border-border"
+                            }`}
                         >
                           {codeBadge.slice(0, 3)}
                         </div>
@@ -617,13 +614,12 @@ export function DesglosarBultoDialog({
                             {item.prod.nombre}
                           </p>
                           <span
-                            className={`font-mono text-xs font-bold shrink-0 ${
-                              item.isCompleted
-                                ? "text-emerald-600 dark:text-emerald-400"
-                                : item.totalCount > 0
+                            className={`font-mono text-xs font-bold shrink-0 ${item.isCompleted
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : item.totalCount > 0
                                 ? "text-primary"
                                 : "text-muted-foreground"
-                            }`}
+                              }`}
                           >
                             {item.totalCount}
                             {item.prod.cantidad_estimada ? `/${item.prod.cantidad_estimada}` : ""}
@@ -725,16 +721,16 @@ export function DesglosarBultoDialog({
                             {activeStat.prod.codigo_interno}
                           </span>
                         )}
-                        <span>·</span>
+                        {/*<span>·</span>*/}
                         <span>
-                          Esperadas:{" "}
+                          Esp:{" "}
                           <strong className="text-foreground">
                             ~{activeStat.prod.cantidad_estimada ?? "—"} uds
                           </strong>
                         </span>
                         <span>·</span>
                         <span>
-                          Contadas:{" "}
+                          Cont:{" "}
                           <strong className="text-primary font-mono">
                             {activeStat.totalCount} uds
                           </strong>
@@ -805,9 +801,8 @@ export function DesglosarBultoDialog({
                         return (
                           <div
                             key={v.id}
-                            className={`p-3 sm:px-4 flex items-center justify-between gap-3 transition-colors ${
-                              cant > 0 ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-muted/20"
-                            }`}
+                            className={`p-3 sm:px-4 flex items-center justify-between gap-3 transition-colors ${cant > 0 ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-muted/20"
+                              }`}
                           >
                             {/* Variante: Color / Talla */}
                             <div className="w-1/3 min-w-0">
