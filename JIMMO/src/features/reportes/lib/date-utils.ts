@@ -45,7 +45,12 @@ export function getRangoPeriodo(
   let label = "Este mes";
   let sublabel = "";
 
-  if (periodo === "hoy") {
+  if (!periodo || periodo === "todo") {
+    desde = null;
+    hasta = null;
+    label = "Todo el histórico";
+    sublabel = "Sin filtro de fecha";
+  } else if (periodo === "hoy") {
     desde = localDayStart(now);
     hasta = localDayEnd(now);
     const d = String(now.getDate()).padStart(2, "0");
@@ -66,26 +71,7 @@ export function getRangoPeriodo(
     const md = MESES_ES[domingo.getMonth()];
     label = "Esta semana";
     sublabel = `${dl} ${ml} — ${dd} ${md}`;
-  } else if (periodo === "anio") {
-    const y = now.getFullYear();
-    const inicio = new Date(y, 0, 1);
-    const fin = new Date(y, 11, 31);
-    desde = localDayStart(inicio);
-    hasta = localDayEnd(fin);
-    label = `Año ${y}`;
-    sublabel = `1 ene — 31 dic ${y}`;
-  } else if (periodo === "todo") {
-    desde = null;
-    hasta = null;
-    label = "Todo el histórico";
-    sublabel = "Sin filtro de fecha";
-  } else if (periodo === "custom" && desdeParam && hastaParam) {
-    desde = localDayStart(new Date(`${desdeParam}T12:00:00`));
-    hasta = localDayEnd(new Date(`${hastaParam}T12:00:00`));
-    label = "Personalizado";
-    sublabel = `${desdeParam} a ${hastaParam}`;
-  } else {
-    // Default: "mes"
+  } else if (periodo === "mes") {
     const y = now.getFullYear();
     const m = now.getMonth();
     const inicio = new Date(y, m, 1);
@@ -95,6 +81,25 @@ export function getRangoPeriodo(
     const mes = MESES_ES[m];
     label = "Este mes";
     sublabel = `${mes.charAt(0).toUpperCase() + mes.slice(1)} ${y}`;
+  } else if (periodo === "anio") {
+    const y = now.getFullYear();
+    const inicio = new Date(y, 0, 1);
+    const fin = new Date(y, 11, 31);
+    desde = localDayStart(inicio);
+    hasta = localDayEnd(fin);
+    label = `Año ${y}`;
+    sublabel = `1 ene — 31 dic ${y}`;
+  } else if (periodo === "custom" && desdeParam && hastaParam) {
+    desde = localDayStart(new Date(`${desdeParam}T12:00:00`));
+    hasta = localDayEnd(new Date(`${hastaParam}T12:00:00`));
+    label = "Personalizado";
+    sublabel = `${desdeParam} a ${hastaParam}`;
+  } else {
+    // Si no coincide con ninguno, por defecto mostrar todo
+    desde = null;
+    hasta = null;
+    label = "Todo el histórico";
+    sublabel = "Sin filtro de fecha";
   }
 
   return { desde, hasta, label, sublabel, periodo };

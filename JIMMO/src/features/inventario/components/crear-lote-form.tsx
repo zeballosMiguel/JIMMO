@@ -298,7 +298,7 @@ export function CrearLoteForm({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        
+
         {/* ── BLOQUE 1: Datos Generales y Proveedor ──────────────── */}
         <div className="bg-card border border-border rounded-2xl p-5 shadow-xs space-y-4">
           <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
@@ -369,7 +369,7 @@ export function CrearLoteForm({
               <Input
                 id="gastos_extras_lote"
                 type="number"
-                step="0.01"
+                step="0.00"
                 min="0"
                 placeholder="Ej. 100.00"
                 value={gastosExtrasLote}
@@ -481,7 +481,7 @@ export function CrearLoteForm({
           {/* Formulario de Entrada de Ítem */}
           <div className="p-4 rounded-xl bg-muted/30 border border-border/80 space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
-              
+
               {/* Selector de Producto */}
               <div className="sm:col-span-5 space-y-1.5">
                 <Label className="text-xs font-semibold">Producto / Modelo *</Label>
@@ -571,7 +571,7 @@ export function CrearLoteForm({
               <p className="text-xs font-bold text-muted-foreground">
                 Productos en este Lote ({itemsCompra.length}):
               </p>
-              
+
               <div className="divide-y divide-border border border-border rounded-xl overflow-hidden bg-background">
                 {itemsCompra.map((item, idx) => {
                   const prodUsd = item.costo_total_usd || 0;

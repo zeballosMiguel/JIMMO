@@ -1,14 +1,15 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Calendar, ChevronDown } from "lucide-react";
+import { Calendar } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export function ReportePeriodoSelect() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
@@ -40,7 +41,7 @@ export function ReportePeriodoSelect() {
         params.delete("desde");
         params.delete("hasta");
       }
-      router.push(`/reportes?${params.toString()}`);
+      router.push(`${pathname}?${params.toString()}`);
     });
   }
 
@@ -53,7 +54,7 @@ export function ReportePeriodoSelect() {
       params.set("periodo", "custom");
       params.set("desde", desde);
       params.set("hasta", hasta);
-      router.push(`/reportes?${params.toString()}`);
+      router.push(`${pathname}?${params.toString()}`);
     });
   }
 
