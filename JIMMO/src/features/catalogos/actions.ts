@@ -426,7 +426,7 @@ export async function crearVarianteDirecta(input: CrearVarianteDirectaInput) {
     if (error.code === "23505" || error.message?.includes("unique") || error.message?.includes("duplicate")) {
       const tallaFiltro = parsed.data.talla ?? null;
 
-      // 1️⃣ Buscar por producto_id + color + talla (búsqueda exacta)
+      // 1️⃣ Buscar si esta variante EXACTA (producto_id + color + talla) ya existe PARA ESTE PRODUCTO
       let existingQuery = supabase
         .from("variantes_producto")
         .select("id, producto_id, color, talla, sku, stock_actual, stock_minimo")
@@ -439,27 +439,66 @@ export async function crearVarianteDirecta(input: CrearVarianteDirectaInput) {
         existingQuery = existingQuery.is("talla", null);
       }
 
-      const { data: existing } = await existingQuery.maybeSingle();
+      const { data: existingSameProduct } = await existingQuery.maybeSingle();
 
-      if (existing) {
-        return { success: true, variante: existing };
+      if (existingSameProduct) {
+        return { success: true, variante: existingSameProduct };
       }
 
-      // 2️⃣ Fallback: buscar por SKU exacto
+      // 2️⃣ Si el SKU coincidió, verificar si pertenece a ESTE MISMO producto
       if (input.sku) {
         const { data: existingSku } = await supabase
           .from("variantes_producto")
           .select("id, producto_id, color, talla, sku, stock_actual, stock_minimo")
           .eq("sku", input.sku.trim())
           .maybeSingle();
-        if (existingSku) {
+
+        // ⚠️ CRÍTICO: SOLO retornar si pertenece a ESTE MISMO producto
+        if (existingSku && existingSku.producto_id === input.producto_id) {
           return { success: true, variante: existingSku };
         }
       }
 
-      // 3️⃣ Si tampoco encontró por SKU, informar de forma amigable
+      // 3️⃣ El SKU colisionó con OTRA variante o producto diferente (ej. dos productos llamados Impermeable...)
+      // Generar automáticamente un SKU único para este producto y reintentar
+      const baseSku = (parsed.data.sku || `${input.color.slice(0, 3)}-${tallaFiltro || "U"}`)
+        .toUpperCase()
+        .replace(/[^A-Z0-9-]/g, "");
+
+      let inserted = null;
+      let lastErr = null;
+
+      for (let attempt = 1; attempt <= 5; attempt++) {
+        const suffix = attempt === 1 
+          ? Math.floor(100 + Math.random() * 900).toString() 
+          : Math.random().toString(36).substring(2, 6).toUpperCase();
+        const altSku = `${baseSku.slice(0, 24)}-${suffix}`;
+
+        const resRetry = await supabase
+          .from("variantes_producto")
+          .insert({
+            ...parsed.data,
+            sku: altSku,
+          })
+          .select("id, producto_id, color, talla, sku, stock_actual, stock_minimo")
+          .single();
+
+        if (!resRetry.error && resRetry.data) {
+          inserted = resRetry.data;
+          break;
+        }
+        lastErr = resRetry.error;
+      }
+
+      if (inserted) {
+        revalidatePath("/catalogos");
+        revalidatePath("/catalogos/variantes");
+        revalidatePath("/lotes");
+        return { success: true, variante: inserted };
+      }
+
       return {
-        error: `La variante "${input.color}${tallaFiltro ? ` / ${tallaFiltro}` : ""}" ya existe para este producto. Puedes registrar su cantidad directamente desde la lista de variantes.`,
+        error: `Conflicto de código SKU con otro producto: ${lastErr?.message || error.message}`,
       };
     }
     return { error: error.message };

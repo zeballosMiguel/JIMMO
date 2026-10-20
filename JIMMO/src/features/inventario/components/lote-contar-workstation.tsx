@@ -109,15 +109,14 @@ function getProductCodeBadge(codigoInterno?: string | null, nombre?: string): st
 // SKU automático para variantes
 function getVariantSku(v: VarianteOption, prod?: ProductoLoteInfo | null): string {
   if (v.sku && v.sku.trim()) return v.sku.trim();
-  const prefix = (prod?.codigo_interno || prod?.nombre?.slice(0, 3) || "PRD")
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "");
+  const prefix = getProductCodeBadge(prod?.codigo_interno, prod?.nombre).replace(/[^A-Z0-9]/g, "");
+  const idHash = prod?.id ? prod.id.replace(/-/g, "").slice(0, 3).toUpperCase() : "";
   const colorPart = v.color
     .slice(0, 3)
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, "");
   const tallaPart = v.talla ? `-${v.talla.toUpperCase().trim()}` : "";
-  return `${prefix}-${colorPart}${tallaPart}`;
+  return `${prefix}${idHash ? `-${idHash}` : ""}-${colorPart}${tallaPart}`;
 }
 
 export function LoteContarWorkstation({
@@ -365,12 +364,11 @@ export function LoteContarWorkstation({
     const prodInfo = localProductos.find(
       (p) => String(p.id || "").toLowerCase() === String(productoId || "").toLowerCase()
     );
-    const prefix = (prodInfo?.codigo_interno || prodInfo?.nombre?.slice(0, 3) || "PRD")
-      .toUpperCase()
-      .replace(/[^A-Z0-9]/g, "");
+    const prefix = getProductCodeBadge(prodInfo?.codigo_interno, prodInfo?.nombre).replace(/[^A-Z0-9]/g, "");
+    const idHash = prodInfo?.id ? prodInfo.id.replace(/-/g, "").slice(0, 3).toUpperCase() : "";
     const colorPart = nuevoColor.trim().slice(0, 3).toUpperCase().replace(/[^A-Z0-9]/g, "");
     const tallaPart = `-${tallaFinal.toUpperCase()}`;
-    const autoSku = `${prefix}-${colorPart}${tallaPart}`;
+    const autoSku = `${prefix}${idHash ? `-${idHash}` : ""}-${colorPart}${tallaPart}`;
 
     startTransition(async () => {
       const res = await crearVarianteDirecta({

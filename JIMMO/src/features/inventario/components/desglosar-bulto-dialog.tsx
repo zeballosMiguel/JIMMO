@@ -293,12 +293,16 @@ export function DesglosarBultoDialog({
     }
 
     const prodInfo = localProductos.find((p) => p.id === productoId);
-    const prefix = (prodInfo?.codigo_interno || prodInfo?.nombre?.slice(0, 3) || "PRD")
-      .toUpperCase()
-      .replace(/[^A-Z0-9]/g, "");
+    let prefix = (prodInfo?.codigo_interno || "").trim();
+    if (!prefix) {
+      const words = (prodInfo?.nombre || "PRD").trim().split(/\s+/);
+      prefix = words.length > 1 ? words.map((w) => w[0]).join("") : (prodInfo?.nombre || "PRD").slice(0, 3);
+    }
+    prefix = prefix.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const idHash = prodInfo?.id ? prodInfo.id.replace(/-/g, "").slice(0, 3).toUpperCase() : "";
     const colorPart = nuevoColor.trim().slice(0, 3).toUpperCase().replace(/[^A-Z0-9]/g, "");
     const tallaPart = nuevaTalla.trim() ? `-${nuevaTalla.trim().toUpperCase()}` : "";
-    const autoSku = `${prefix}-${colorPart}${tallaPart}`;
+    const autoSku = `${prefix}${idHash ? `-${idHash}` : ""}-${colorPart}${tallaPart}`;
 
     startTransition(async () => {
       const res = await crearVarianteDirecta({
