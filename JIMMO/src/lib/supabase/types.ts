@@ -346,6 +346,39 @@ export interface Database {
         Insert: Omit<Database["public"]["Tables"]["retiros"]["Row"], "id">;
         Update: Partial<Database["public"]["Tables"]["retiros"]["Insert"]>;
       };
+      devoluciones: {
+        Row: {
+          id: string;
+          pedido_id: string;
+          tipo: "DEVOLUCION" | "CAMBIO" | "DEVOLUCION_PARCIAL";
+          motivo: string | null;
+          monto_reembolso_bs: number;
+          usuario_id: string | null;
+          created_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["devoluciones"]["Row"], "id" | "created_at">;
+        Update: Partial<Database["public"]["Tables"]["devoluciones"]["Insert"]>;
+      };
+      detalle_devolucion: {
+        Row: {
+          id: string;
+          devolucion_id: string;
+          variante_id: string;
+          cantidad: number;
+        };
+        Insert: Omit<Database["public"]["Tables"]["detalle_devolucion"]["Row"], "id">;
+        Update: Partial<Database["public"]["Tables"]["detalle_devolucion"]["Insert"]>;
+      };
+      detalle_cambio: {
+        Row: {
+          id: string;
+          devolucion_id: string;
+          variante_id: string;
+          cantidad: number;
+        };
+        Insert: Omit<Database["public"]["Tables"]["detalle_cambio"]["Row"], "id">;
+        Update: Partial<Database["public"]["Tables"]["detalle_cambio"]["Insert"]>;
+      };
     };
     Views: {
       vw_inventario: {

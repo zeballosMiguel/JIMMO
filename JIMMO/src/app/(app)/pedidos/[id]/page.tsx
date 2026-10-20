@@ -11,7 +11,9 @@ import { PagoEliminarButton } from "@/features/pagos/components/pago-eliminar-bu
 import { EntregaEliminarButton } from "@/features/entregas/components/entrega-eliminar-button";
 import { Button, buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
-import { ArrowLeft, Pencil, Plus } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, RotateCcw } from "lucide-react";
+import { getPerfil } from "@/lib/auth/session";
+import { DevolucionCambioDialog } from "@/features/pedidos/components/devolucion-cambio-dialog";
 
 export const metadata = { title: "Detalle de Pedido" };
 
@@ -23,16 +25,49 @@ export default async function PedidoDetallePage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: pedido }, { data: pedidoRaw }, { data: detalles }, { data: pagos }, { data: entregas }] = await Promise.all([
+  const [
+    perfil,
+    { data: pedido },
+    { data: pedidoRaw },
+    { data: detalles },
+    { data: pagos },
+    { data: entregas },
+    { data: devoluciones },
+  ] = await Promise.all([
+    getPerfil(),
     supabase.from("vw_pedidos").select("*").eq("id", id).single(),
     supabase.from("pedidos").select("lugar_entrega, lugar_envio, notas").eq("id", id).single(),
     supabase.from("detalle_pedido").select("*, variantes_producto(color, talla, sku, productos(nombre))").eq("pedido_id", id).eq("activo", true),
     supabase.from("pagos").select("*").eq("pedido_id", id).order("created_at", { ascending: false }),
     supabase.from("entregas").select("*").eq("pedido_id", id).order("fecha_programada", { ascending: false }),
+    supabase
+      .from("devoluciones")
+      .select(`
+        *,
+        detalle_devolucion (
+          cantidad,
+          variantes_producto (
+            color,
+            talla,
+            productos (nombre)
+          )
+        ),
+        detalle_cambio (
+          cantidad,
+          variantes_producto (
+            color,
+            talla,
+            productos (nombre)
+          )
+        )
+      `)
+      .eq("pedido_id", id)
+      .order("created_at", { ascending: false }),
   ]);
 
   if (!pedido) notFound();
 
+  const esAdmin = perfil?.rol === "admin";
   const saldo = Number(pedido.saldo || 0);
   const esFinalizado = pedido.estado === "COMPLETADO" || pedido.estado === "CANCELADO";
   const esRetiroEnTienda = pedido.tipo_entrega?.toLowerCase().includes("tienda");
@@ -91,6 +126,15 @@ export default async function PedidoDetallePage({
                 <CrearEntregaDialog pedidoId={pedido.id} />
               )}
             </>
+          )}
+          {pedido.estado === "COMPLETADO" && esAdmin && (
+            <DevolucionCambioDialog
+              pedidoId={pedido.id}
+              numeroPedido={pedido.numero}
+              detalles={(detalles as any) || []}
+              totalPedido={Number(pedido.total || 0)}
+              esAdmin={esAdmin}
+            />
           )}
           <AccionesPedido pedidoId={pedido.id} estado={pedido.estado} />
         </div>
@@ -273,6 +317,102 @@ export default async function PedidoDetallePage({
           </div>
         </div>
       </div>
+
+      {/* Historial de Ajustes Post-Venta (Devoluciones y Cambios) */}
+      {devoluciones && devoluciones.length > 0 && (
+        <div className="bg-card border-2 border-amber-500/30 rounded-xl p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div className="flex items-center gap-2">
+              <RotateCcw className="w-5 h-5 text-amber-500" />
+              <h3 className="font-bold text-foreground">Historial de Ajustes Post-Venta (Devoluciones / Cambios)</h3>
+            </div>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+              {devoluciones.length} {devoluciones.length === 1 ? "ajuste registrado" : "ajustes registrados"}
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {devoluciones.map((dev: any) => {
+              const devueltos = dev.detalle_devolucion || [];
+              const cambios = dev.detalle_cambio || [];
+              const fecha = new Date(dev.created_at).toLocaleString("es-VE", {
+                dateStyle: "medium",
+                timeStyle: "short",
+              });
+
+              return (
+                <div key={dev.id} className="p-3.5 rounded-lg border border-border bg-muted/20 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant={dev.tipo === "CAMBIO" ? "default" : "destructive"}
+                        className="text-[11px] font-bold"
+                      >
+                        {dev.tipo === "CAMBIO" ? "CAMBIO DE PRENDA" : "DEVOLUCIÓN DE PRENDA"}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">{fecha}</span>
+                    </div>
+
+                    {Number(dev.monto_reembolso_bs) > 0 && (
+                      <span className="text-xs font-bold text-destructive bg-destructive/10 px-2 py-0.5 rounded border border-destructive/20">
+                        Reembolso en efectivo: Bs {Number(dev.monto_reembolso_bs).toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+
+                  {dev.motivo && (
+                    <p className="text-xs text-foreground italic">
+                      <span className="font-semibold not-italic text-muted-foreground">Motivo:</span> "{dev.motivo}"
+                    </p>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-1 text-xs">
+                    {/* Devueltas */}
+                    <div className="p-2 rounded bg-background border border-border/70 space-y-1">
+                      <span className="font-bold text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                        <RotateCcw className="w-3 h-3" /> Prendas que retornaron al stock:
+                      </span>
+                      {devueltos.length === 0 ? (
+                        <p className="text-muted-foreground text-[11px] italic">Sin detalle</p>
+                      ) : (
+                        devueltos.map((item: any, i: number) => {
+                          const vp = item.variantes_producto;
+                          return (
+                            <p key={i} className="text-foreground pl-2 text-[11px]">
+                              • <span className="font-bold">{item.cantidad}x</span> {vp?.productos?.nombre} ({vp?.color}{vp?.talla ? ` / ${vp.talla}` : ""})
+                            </p>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {/* Entregadas en cambio */}
+                    {dev.tipo === "CAMBIO" && (
+                      <div className="p-2 rounded bg-background border border-border/70 space-y-1">
+                        <span className="font-bold text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                          <Plus className="w-3 h-3" /> Nuevas prendas entregadas al cliente:
+                        </span>
+                        {cambios.length === 0 ? (
+                          <p className="text-muted-foreground text-[11px] italic">Sin prendas de reemplazo</p>
+                        ) : (
+                          cambios.map((item: any, i: number) => {
+                            const vp = item.variantes_producto;
+                            return (
+                              <p key={i} className="text-foreground pl-2 text-[11px]">
+                                • <span className="font-bold">{item.cantidad}x</span> {vp?.productos?.nombre} ({vp?.color}{vp?.talla ? ` / ${vp.talla}` : ""})
+                              </p>
+                            );
+                          })
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

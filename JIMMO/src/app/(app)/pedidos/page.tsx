@@ -255,9 +255,21 @@ export default async function PedidosPage({
                       Bs {Number(p.saldo).toLocaleString("es-VE", { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="align-top pt-3">
-                      <Badge variant={estadoVariant[p.estado] ?? "secondary"}>
-                        {p.estado}
-                      </Badge>
+                      <div className="flex flex-col gap-1 items-start">
+                        <Badge variant={estadoVariant[p.estado] ?? "secondary"}>
+                          {p.estado}
+                        </Badge>
+                        {p.notas && p.notas.includes("[Ajuste:") && (
+                          <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                            Ajustado
+                          </span>
+                        )}
+                        {p.notas && p.notas.includes("[VENTA ANULADA POR DEVOLUCIÓN TOTAL]") && (
+                          <span className="text-[10px] font-semibold text-destructive bg-destructive/10 px-1.5 py-0.5 rounded border border-destructive/20">
+                            Devolución Total
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right align-top pt-2.5">
                       <div className="flex items-center justify-end gap-1">

@@ -64,7 +64,7 @@ interface ColorConfig {
 const PRESET_COLORES = [
   { nombre: "Negro", hex: "#111827" },
   { nombre: "Blanco", hex: "#F9FAFB", border: true },
-  { nombre: "Gris", hex: "#6B7280" },
+  { nombre: "Plomo", hex: "#6B7280" },
   { nombre: "Beige", hex: "#D7C4A5" },
   { nombre: "Azul Marino", hex: "#1E3A8A" },
 ];
@@ -468,7 +468,7 @@ export function ProductoTodoEnUnoDialog({
         const unidades = res.unidadesStock ?? 0;
         toast.success(
           `¡Producto "${nombre}" creado con éxito con ${res.variantesCount ?? 0} variantes!` +
-            (unidades > 0 ? ` (${unidades} unidades ingresadas a inventario)` : "")
+          (unidades > 0 ? ` (${unidades} unidades ingresadas a inventario)` : "")
         );
         resetForm();
         setOpen(false);
@@ -640,11 +640,10 @@ export function ProductoTodoEnUnoDialog({
                         key={c.nombre}
                         type="button"
                         onClick={() => togglePresetColor(c)}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
-                          selected
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${selected
                             ? "bg-primary text-primary-foreground border-primary shadow-xs"
                             : "bg-background border-border/80 text-foreground hover:border-primary/60"
-                        }`}
+                          }`}
                       >
                         <span
                           className="w-2.5 h-2.5 rounded-full shrink-0"
