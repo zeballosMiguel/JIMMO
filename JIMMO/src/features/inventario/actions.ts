@@ -1200,5 +1200,148 @@ export async function actualizarCostoProductoEnLote(data: {
   return { success: true };
 }
 
+// ─── Agregar producto nuevo a un lote pendiente de conteo ────────────────────
+export async function agregarProductoALote(data: {
+  loteId: string;
+  productoId: string;
+  cantidadEstimada: number;
+  costoUsd: number;
+}) {
+  try {
+    await requireAdmin();
+  } catch (err: any) {
+    return { error: err.message || "Acceso denegado" };
+  }
+
+  const supabase = await createClient();
+
+  // 1. Obtener lote
+  const { data: lote, error: errLote } = await supabase
+    .from("lotes")
+    .select("id, estado, notas, productos_compra, costo_total_usd, cantidad_estimada, gastos_extras_bs, tipo_cambio")
+    .eq("id", data.loteId)
+    .single();
+
+  if (errLote || !lote) return { error: "Lote no encontrado" };
+
+  if (lote.estado === "RECIBIDO" || lote.estado === "CERRADO") {
+    return { error: "No se pueden añadir productos a un lote ya cerrado o ingresado a inventario." };
+  }
+
+  // 2. Obtener datos del producto a agregar
+  const { data: producto, error: errProd } = await supabase
+    .from("productos")
+    .select("id, nombre, codigo_interno")
+    .eq("id", data.productoId)
+    .single();
+
+  if (errProd || !producto) return { error: "Producto no encontrado en catálogo" };
+
+  // 3. Reconstruir array de productos_compra
+  let productosArray: any[] = [];
+  if (Array.isArray(lote.productos_compra)) {
+    productosArray = [...lote.productos_compra];
+  } else {
+    try {
+      const notas: string = lote.notas || "";
+      const marker = "[ITEMS_COMPRA:";
+      const markerIdx = notas.indexOf(marker);
+      if (markerIdx !== -1) {
+        const jsonStart = markerIdx + marker.length;
+        let depth = 0;
+        let jsonEnd = jsonStart;
+        for (let i = jsonStart; i < notas.length; i++) {
+          if (notas[i] === "[") depth++;
+          else if (notas[i] === "]") {
+            depth--;
+            if (depth === 0) { jsonEnd = i + 1; break; }
+          }
+        }
+        productosArray = JSON.parse(notas.slice(jsonStart, jsonEnd));
+      }
+    } catch {}
+  }
+
+  const cant = Math.max(1, Number(data.cantidadEstimada) || 1);
+  const usd = Math.max(0, Number(data.costoUsd) || 0);
+
+  const existingIdx = productosArray.findIndex((p) => p.producto_id === data.productoId);
+  if (existingIdx >= 0) {
+    productosArray[existingIdx] = {
+      ...productosArray[existingIdx],
+      nombre_producto: producto.nombre,
+      codigo_interno: producto.codigo_interno,
+      cantidad: cant,
+      cantidad_estimada: cant,
+      costo_total_usd: usd,
+      costo_usd: usd,
+    };
+  } else {
+    productosArray.push({
+      producto_id: producto.id,
+      nombre_producto: producto.nombre,
+      codigo_interno: producto.codigo_interno,
+      cantidad: cant,
+      cantidad_estimada: cant,
+      costo_total_usd: usd,
+      costo_usd: usd,
+      otros_costos_bs: 0,
+    });
+  }
+
+  const nuevoCostoTotalUsd = productosArray.reduce(
+    (acc, p) => acc + (Number(p.costo_total_usd ?? p.costo_usd) || 0),
+    0
+  );
+  const nuevaCantidadEstimada = productosArray.reduce(
+    (acc, p) => acc + (Number(p.cantidad ?? p.cantidad_estimada) || 0),
+    0
+  );
+
+  let nuevasNotas = lote.notas || "";
+  const productosJson = JSON.stringify(productosArray);
+  const marker = "[ITEMS_COMPRA:";
+  if (nuevasNotas.includes(marker)) {
+    const markerIdx = nuevasNotas.indexOf(marker);
+    let depth = 0;
+    let jsonEnd = markerIdx + marker.length;
+    for (let i = markerIdx + marker.length; i < nuevasNotas.length; i++) {
+      if (nuevasNotas[i] === "[") depth++;
+      else if (nuevasNotas[i] === "]") {
+        depth--;
+        if (depth === 0) { jsonEnd = i + 1; break; }
+      }
+    }
+    nuevasNotas = nuevasNotas.slice(0, markerIdx) + `[ITEMS_COMPRA:${productosJson}]` + nuevasNotas.slice(jsonEnd);
+  } else {
+    nuevasNotas = nuevasNotas ? `${nuevasNotas}\n\n[ITEMS_COMPRA:${productosJson}]` : `[ITEMS_COMPRA:${productosJson}]`;
+  }
+
+  const updatePayload: Record<string, any> = {
+    costo_total_usd: nuevoCostoTotalUsd,
+    cantidad_estimada: nuevaCantidadEstimada,
+    notas: nuevasNotas,
+    productos_compra: productosArray,
+  };
+
+  const { error: errUpdate } = await (supabase as any)
+    .from("lotes")
+    .update(updatePayload)
+    .eq("id", data.loteId);
+
+  if (errUpdate && errUpdate.message.includes("productos_compra")) {
+    delete updatePayload.productos_compra;
+    await supabase.from("lotes").update(updatePayload).eq("id", data.loteId);
+  }
+
+  await recalcularDetallesLote(supabase, data.loteId);
+
+  revalidatePath(`/lotes/${data.loteId}`);
+  revalidatePath("/lotes");
+  revalidatePath("/inventario");
+  return { success: true };
+}
+
+
 
 

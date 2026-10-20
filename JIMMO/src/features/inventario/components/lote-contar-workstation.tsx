@@ -6,6 +6,7 @@ import Link from "next/link";
 import { desglosarYRecibirLote, soloDesgloseDetalleLote, type DesgloseVarianteItem } from "@/features/inventario/actions";
 import { crearVarianteDirecta } from "@/features/catalogos/actions";
 import { EditarProductoLoteDialog } from "@/features/inventario/editar-producto-lote-dialog";
+import { AgregarProductoLoteDialog } from "@/features/inventario/components/agregar-producto-lote-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -721,6 +722,21 @@ export function LoteContarWorkstation({
                   </button>
                 );
               })
+            )}
+
+            {/* Botón para añadir un producto nuevo del catálogo al lote si aún no está finalizado */}
+            {!isFinalizado && (
+              <div className="pt-2 px-1">
+                <AgregarProductoLoteDialog
+                  loteId={lote.id}
+                  loteNumero={lote.numero_lote}
+                  catalogoProductos={catalogoProductos}
+                  productosExistentesIds={localProductos.map((p) => p.id)}
+                  buttonVariant="outline"
+                  buttonSize="sm"
+                  buttonLabel="+ Agregar Producto al Lote"
+                />
+              </div>
             )}
           </div>
         </div>

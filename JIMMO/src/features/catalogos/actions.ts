@@ -681,7 +681,14 @@ export async function eliminarVariante(id: string) {
   }
   const supabase = await createClient();
   const { error } = await supabase.from("variantes_producto").delete().eq("id", id);
-  if (error) return { error: error.message };
+  if (error) {
+    if (error.message.includes("detalle_lote") || error.message.includes("foreign key constraint")) {
+      return {
+        error: "No se puede eliminar esta variante porque ya está registrada en lotes de compra o inventario histórico. Para no perder el historial contable, manténla con stock en 0.",
+      };
+    }
+    return { error: error.message };
+  }
   revalidatePath("/catalogos");
   revalidatePath("/catalogos/variantes");
   return { success: true };

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Plus, Pencil, ShoppingBag, Search } from "lucide-react";
 import { ExportarPedidosExcelButton } from "@/features/pedidos/components/exportar-pedidos-excel-button";
 import { RefreshButton } from "@/components/ui/refresh-button";
+import { PedidoEliminarButton } from "@/features/pedidos/components/pedido-eliminar-button";
 
 export const metadata = { title: "Pedidos y Ventas" };
 
@@ -272,6 +273,14 @@ export default async function PedidosPage({
                           >
                             <Pencil className="w-4 h-4" />
                           </Link>
+                        )}
+                        {(p.estado === "RESERVADO" || p.estado === "CANCELADO") && (
+                          <PedidoEliminarButton
+                            pedidoId={p.id}
+                            numero={p.numero}
+                            cliente={p.cliente}
+                            estado={p.estado}
+                          />
                         )}
                       </div>
                     </TableCell>

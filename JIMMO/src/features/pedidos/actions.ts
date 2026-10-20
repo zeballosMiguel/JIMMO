@@ -144,6 +144,16 @@ export async function cancelarPedido(pedidoId: string) {
   revalidatePath(`/pedidos/${pedidoId}`);
   revalidatePath("/pedidos");
   revalidatePath("/dashboard");
+  revalidatePath("/clientes");
+  revalidatePath("/lotes");
+  revalidatePath("/inventario");
+  revalidatePath("/pagos");
+  revalidatePath("/entregas");
+  revalidatePath("/reportes");
+  revalidatePath("/reportes/rentabilidad-lote");
+  revalidatePath("/reportes/rentabilidad-producto");
+  revalidatePath("/reportes/utilidad-vendedor");
+  revalidatePath("/reportes/utilidad-inversionista");
   return { success: true };
 }
 

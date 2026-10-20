@@ -17,6 +17,7 @@ import { DetalleLoteEliminarButton } from "@/features/inventario/lote-eliminar-b
 import { EditarLoteDialog } from "@/features/inventario/editar-lote-dialog";
 import { EditarDetalleLoteDialog } from "@/features/inventario/editar-detalle-lote-dialog";
 import { EditarProductoLoteDialog } from "@/features/inventario/editar-producto-lote-dialog";
+import { AgregarProductoLoteDialog } from "@/features/inventario/components/agregar-producto-lote-dialog";
 import { LoteContarWorkstation } from "@/features/inventario/components/lote-contar-workstation";
 import {
   ArrowLeft,
@@ -672,6 +673,16 @@ export function LoteDetalleView({
         {/* Acciones del encabezado */}
         <div className="flex items-center gap-2 flex-wrap">
           <EditarLoteDialog lote={lote} inversionistas={inversionistas} />
+
+          {/* Si el lote está en tránsito o pendiente, permitir añadir nuevos productos a la compra */}
+          {isEditable && (
+            <AgregarProductoLoteDialog
+              loteId={lote.id}
+              loteNumero={lote.numero_lote}
+              catalogoProductos={productos}
+              productosExistentesIds={productosLote.map((p) => p.id)}
+            />
+          )}
 
           {/* Si estamos en inventario finalizado, botón para ajustar conteo */}
           {!isCountingView && puedeContar && (
