@@ -424,19 +424,28 @@ export async function crearVarianteDirecta(input: CrearVarianteDirectaInput) {
   if (error) {
     // Si la variante ya existe (error de constraint unique en SKU o color/talla)
     if (error.code === "23505" || error.message?.includes("unique") || error.message?.includes("duplicate")) {
-      // Buscar por producto_id y color
-      const { data: existing } = await supabase
+      const tallaFiltro = parsed.data.talla ?? null;
+
+      // 1️⃣ Buscar por producto_id + color + talla (búsqueda exacta)
+      let existingQuery = supabase
         .from("variantes_producto")
         .select("id, producto_id, color, talla, sku, stock_actual, stock_minimo")
         .eq("producto_id", input.producto_id)
-        .ilike("color", input.color.trim())
-        .maybeSingle();
+        .ilike("color", input.color.trim());
+
+      if (tallaFiltro) {
+        existingQuery = existingQuery.ilike("talla", tallaFiltro);
+      } else {
+        existingQuery = existingQuery.is("talla", null);
+      }
+
+      const { data: existing } = await existingQuery.maybeSingle();
 
       if (existing) {
         return { success: true, variante: existing };
       }
 
-      // O buscar por SKU
+      // 2️⃣ Fallback: buscar por SKU exacto
       if (input.sku) {
         const { data: existingSku } = await supabase
           .from("variantes_producto")
@@ -447,6 +456,11 @@ export async function crearVarianteDirecta(input: CrearVarianteDirectaInput) {
           return { success: true, variante: existingSku };
         }
       }
+
+      // 3️⃣ Si tampoco encontró por SKU, informar de forma amigable
+      return {
+        error: `La variante "${input.color}${tallaFiltro ? ` / ${tallaFiltro}` : ""}" ya existe para este producto. Puedes registrar su cantidad directamente desde la lista de variantes.`,
+      };
     }
     return { error: error.message };
   }
