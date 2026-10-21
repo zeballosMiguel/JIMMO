@@ -73,9 +73,21 @@ export function AgregarVariantesLoteDialog({
   const variantesFiltradas = useMemo(() => {
     if (!producto?.id) return [];
     const term = search.trim().toLowerCase();
+    const prodIdTarget = String(producto.id).toLowerCase().trim();
+    const prodCodigoTarget = (producto.codigo_interno || resolvedCodigo || "").toLowerCase().trim();
+    const prodNombreTarget = String(producto.nombre || "").toLowerCase().trim();
+
     return variantesCatalogo
       .filter((v) => {
-        const matchesProd = String(v.producto_id || "").toLowerCase() === String(producto.id).toLowerCase();
+        const vProdId = String(v.producto_id || v.productos?.id || "").toLowerCase().trim();
+        const vCodigo = String(v.productos?.codigo_interno || "").toLowerCase().trim();
+        const vNombre = String(v.productos?.nombre || "").toLowerCase().trim();
+
+        const matchesProd =
+          (prodIdTarget && vProdId === prodIdTarget) ||
+          (prodCodigoTarget && vCodigo && vCodigo === prodCodigoTarget) ||
+          (prodNombreTarget && vNombre && vNombre === prodNombreTarget);
+
         if (!matchesProd) return false;
         if (!term) return true;
         const colorMatch = (v.color || "").toLowerCase().includes(term);
@@ -91,7 +103,7 @@ export function AgregarVariantesLoteDialog({
         if (!aEnConteo && bEnConteo) return -1;
         return (a.color || "").localeCompare(b.color || "");
       });
-  }, [producto, search, variantesCatalogo, conteosActuales]);
+  }, [producto, search, variantesCatalogo, conteosActuales, resolvedCodigo]);
 
   // Total de prendas y variantes listas para agregar
   const resumenSeleccion = useMemo(() => {
@@ -235,9 +247,9 @@ export function AgregarVariantesLoteDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => (v ? onOpenChange(true) : handleClose())}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="w-[95vw] sm:max-w-4xl max-h-[88vh] flex flex-col p-0 gap-0 overflow-hidden shadow-2xl border-border">
         {/* Encabezado */}
-        <DialogHeader className="p-4 sm:p-5 pb-3 border-b border-border bg-muted/20">
+        <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border bg-muted/20 shrink-0">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <DialogTitle className="text-base font-bold text-foreground flex items-center gap-2">
@@ -303,10 +315,10 @@ export function AgregarVariantesLoteDialog({
           ) : (
             <div className="border border-border rounded-xl overflow-hidden bg-background divide-y divide-border/60">
               {/* Header de la mini-tabla */}
-              <div className="bg-muted/40 px-3.5 py-2 flex items-center justify-between text-[11px] font-semibold text-muted-foreground">
-                <span className="w-2/5">Color / Talla</span>
-                <span className="w-1/4">SKU</span>
-                <span className="w-1/3 text-right">Cant. a Contar</span>
+              <div className="bg-muted/40 px-4 py-2.5 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                <span className="w-5/12">Color / Talla</span>
+                <span className="w-3/12">SKU</span>
+                <span className="w-4/12 text-right">Cant. a Contar</span>
               </div>
 
               {/* Filas de variantes */}
@@ -320,7 +332,7 @@ export function AgregarVariantesLoteDialog({
                 return (
                   <div
                     key={v.id}
-                    className={`px-3.5 py-2.5 flex items-center justify-between gap-2 transition-colors ${
+                    className={`px-4 py-3 flex items-center justify-between gap-3 transition-colors ${
                       isSelected
                         ? "bg-primary/10 border-l-4 border-primary"
                         : yaEstaEnConteo
@@ -329,9 +341,9 @@ export function AgregarVariantesLoteDialog({
                     }`}
                   >
                     {/* Color y Talla */}
-                    <div className="w-2/5 min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-bold text-xs text-foreground capitalize truncate">
+                    <div className="w-5/12 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-sm text-foreground capitalize truncate">
                           {v.color}
                         </span>
                         <span className="text-xs text-muted-foreground">
@@ -340,23 +352,23 @@ export function AgregarVariantesLoteDialog({
                         {yaEstaEnConteo && (
                           <Badge
                             variant="secondary"
-                            className="text-[9px] font-medium px-1.5 py-0 h-4 bg-muted text-muted-foreground"
+                            className="text-[10px] font-semibold px-2 py-0.5 h-5 bg-muted text-muted-foreground border border-border/40"
                           >
-                            ✓ {enConteoCant} en lista
+                            ✓ {enConteoCant} ya en conteo
                           </Badge>
                         )}
                       </div>
                     </div>
 
                     {/* SKU */}
-                    <div className="w-1/4 min-w-0">
-                      <span className="font-mono text-[10px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded border border-border/40 truncate block">
+                    <div className="w-3/12 min-w-0">
+                      <span className="font-mono text-xs text-muted-foreground bg-muted/60 px-2 py-1 rounded-md border border-border/50 truncate block">
                         {v.sku || `${resolvedCodigo}-${v.color.slice(0, 3).toUpperCase()}`}
                       </span>
                     </div>
 
                     {/* Input de cantidad y atajos */}
-                    <div className="w-1/3 flex items-center justify-end gap-1.5">
+                    <div className="w-4/12 flex items-center justify-end gap-2 shrink-0">
                       {/* Atajos rápidos +6 y +12 */}
                       <button
                         type="button"
@@ -364,7 +376,7 @@ export function AgregarVariantesLoteDialog({
                           const current = parseInt(cantStr, 10) || 0;
                           handleCantidadChange(v.id, String(current + 6));
                         }}
-                        className="hidden sm:inline-flex text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground"
+                        className="text-xs font-mono font-bold px-2 py-1 rounded-md bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground border border-border/40 transition-colors"
                         title="Sumar 6 prendas"
                       >
                         +6
@@ -375,7 +387,7 @@ export function AgregarVariantesLoteDialog({
                           const current = parseInt(cantStr, 10) || 0;
                           handleCantidadChange(v.id, String(current + 12));
                         }}
-                        className="hidden sm:inline-flex text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground"
+                        className="text-xs font-mono font-bold px-2 py-1 rounded-md bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground border border-border/40 transition-colors"
                         title="Sumar 12 prendas"
                       >
                         +12
@@ -387,7 +399,7 @@ export function AgregarVariantesLoteDialog({
                         placeholder={yaEstaEnConteo ? "+ sumar" : "0"}
                         value={cantStr}
                         onChange={(e) => handleCantidadChange(v.id, e.target.value)}
-                        className={`w-20 h-8 text-xs text-center font-bold bg-background ${
+                        className={`w-28 h-9 text-sm text-center font-bold bg-background ${
                           isSelected ? "border-primary ring-1 ring-primary/40" : ""
                         }`}
                       />
@@ -407,7 +419,7 @@ export function AgregarVariantesLoteDialog({
             >
               <span className="flex items-center gap-1.5 text-primary">
                 <Plus className="w-3.5 h-3.5" />
-                ¿No encuentras el color o talla? Crear nueva variante en catálogo
+                Crear nueva variante
               </span>
               {isCreatingNew ? (
                 <ChevronUp className="w-4 h-4 text-muted-foreground" />
@@ -503,41 +515,44 @@ export function AgregarVariantesLoteDialog({
         </div>
 
         {/* Footer con resumen y acción final */}
-        <DialogFooter className="p-4 border-t border-border bg-muted/20 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-xs text-muted-foreground">
+        <DialogFooter className="p-4 sm:px-6 sm:py-3.5 border-t border-border bg-muted/20 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="text-xs text-muted-foreground flex-1">
             {resumenSeleccion.numVariantes > 0 ? (
-              <span className="font-medium text-foreground">
-                <strong className="text-primary font-bold">{resumenSeleccion.numVariantes}</strong>{" "}
-                {resumenSeleccion.numVariantes === 1 ? "variante lista" : "variantes listas"} ·{" "}
-                <strong className="text-primary font-mono font-bold">
-                  {resumenSeleccion.totalPrendas}
-                </strong>{" "}
-                prendas a ingresar
+              <span className="font-medium text-foreground flex items-center gap-2 flex-wrap">
+                <Badge variant="secondary" className="font-bold text-xs bg-primary/10 text-primary border-primary/20">
+                  {resumenSeleccion.numVariantes} {resumenSeleccion.numVariantes === 1 ? "variante" : "variantes"}
+                </Badge>
+                <span>·</span>
+                <span>
+                  Total a ingresar:{" "}
+                  <strong className="text-primary font-mono font-bold text-sm">
+                    {resumenSeleccion.totalPrendas}
+                  </strong>{" "}
+                  prendas
+                </span>
               </span>
             ) : (
-              <span>Escribe la cantidad en las variantes para seleccionarlas.</span>
+              <span>Ingresa la cantidad física a contar en las variantes deseadas.</span>
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-end gap-2.5 shrink-0">
             <Button
               type="button"
               variant="outline"
-              size="sm"
               onClick={handleClose}
               disabled={isPending}
-              className="h-8 text-xs"
+              className="h-9 px-4 text-xs font-medium"
             >
               Cerrar
             </Button>
             <Button
               type="button"
-              size="sm"
               onClick={handleConfirmarAgregar}
               disabled={isPending || resumenSeleccion.numVariantes === 0}
-              className="h-8 text-xs font-bold gap-1.5 bg-primary text-primary-foreground shadow-xs"
+              className="h-9 px-4 text-xs font-bold gap-1.5 bg-primary text-primary-foreground shadow-xs hover:bg-primary/90"
             >
-              <Check className="w-3.5 h-3.5" />
+              <Check className="w-4 h-4" />
               Agregar al Conteo ({resumenSeleccion.totalPrendas} uds)
             </Button>
           </div>

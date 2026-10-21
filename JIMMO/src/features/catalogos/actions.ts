@@ -803,18 +803,76 @@ export async function eliminarVariante(id: string) {
     return { error: err.message || "Acceso denegado" };
   }
   const supabase = await createClient();
+
+  // Intento directo (sin historial de lotes)
   const { error } = await supabase.from("variantes_producto").delete().eq("id", id);
-  if (error) {
-    if (error.message.includes("detalle_lote") || error.message.includes("foreign key constraint")) {
+  if (!error) {
+    revalidatePath("/catalogos");
+    revalidatePath("/catalogos/variantes");
+    return { success: true };
+  }
+
+  // Si hay FK contra detalle_lote, verificar si es seguro forzar el borrado
+  if (error.message.includes("detalle_lote") || error.message.includes("foreign key constraint")) {
+    // 1. Verificar que no haya ventas asociadas (detalle_pedido)
+    const { count: ventasCount, error: errVentas } = await supabase
+      .from("detalle_pedido")
+      .select("id", { count: "exact", head: true })
+      .eq("variante_id", id)
+      .eq("activo", true);
+
+    if (errVentas) return { error: errVentas.message };
+    if ((ventasCount ?? 0) > 0) {
       return {
-        error: "No se puede eliminar esta variante porque ya está registrada en lotes de compra o inventario histórico. Para no perder el historial contable, manténla con stock en 0.",
+        error:
+          "No se puede eliminar esta variante porque tiene pedidos de venta asociados. Para no perder el historial contable, manténla con stock en 0.",
       };
     }
-    return { error: error.message };
+
+    // 2. Verificar que todo el stock disponible sea 0
+    const { data: detalles, error: errDet } = await supabase
+      .from("detalle_lote")
+      .select("id, cantidad_disponible")
+      .eq("variante_id", id);
+
+    if (errDet) return { error: errDet.message };
+
+    const stockRestante = (detalles ?? []).reduce((acc, d) => acc + (d.cantidad_disponible ?? 0), 0);
+    if (stockRestante > 0) {
+      return {
+        error: `No se puede eliminar esta variante porque aún tiene ${stockRestante} unidad(es) disponible(s) en lotes de compra. Ajustá el stock a 0 antes de eliminar.`,
+      };
+    }
+
+    // 3. Borrar registros auxiliares huérfanos (stock = 0, sin ventas)
+    const detalleIds = (detalles ?? []).map((d) => d.id);
+    if (detalleIds.length > 0) {
+      const { error: errDelDet } = await supabase
+        .from("detalle_lote")
+        .delete()
+        .in("id", detalleIds);
+      if (errDelDet) return { error: errDelDet.message };
+    }
+
+    // Borrar movimientos de inventario asociados (ya verificamos que no hay ventas activas)
+    await supabase
+      .from("movimientos_inventario")
+      .delete()
+      .eq("variante_id", id);
+
+    // 4. Ahora sí borrar la variante
+    const { error: errDelVar } = await supabase
+      .from("variantes_producto")
+      .delete()
+      .eq("id", id);
+    if (errDelVar) return { error: errDelVar.message };
+
+    revalidatePath("/catalogos");
+    revalidatePath("/catalogos/variantes");
+    return { success: true };
   }
-  revalidatePath("/catalogos");
-  revalidatePath("/catalogos/variantes");
-  return { success: true };
+
+  return { error: error.message };
 }
 
 // ─── Eliminar Canal ─────────────────────────────────────────

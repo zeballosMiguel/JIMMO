@@ -74,9 +74,10 @@ export default async function LoteDetallePage({
     supabase
       .from("variantes_producto")
       .select(
-        "id, sku, color, talla, producto_id, stock_actual, stock_disponible, productos(id, nombre, codigo_interno)"
+        "id, sku, color, talla, producto_id, stock_actual, stock_reservado, activa, productos(id, nombre, codigo_interno)"
       )
-      .eq("activa", true),
+      .neq("activa", false)
+      .order("color", { ascending: true }),
     supabase
       .from("productos")
       .select("id, nombre, codigo_interno, descripcion, categoria_id, categorias(id, nombre)")

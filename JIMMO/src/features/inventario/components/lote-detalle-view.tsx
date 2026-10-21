@@ -287,10 +287,12 @@ export function LoteDetalleView({
   }, [lote, detalles, productos]);
 
   // Variantes correspondientes a los productos de este lote, sin variantes "Estándar" dummy
+  // Variantes ya registradas en los detalles de este lote (sin variantes "Estándar" dummy)
+  // Las variantes del catálogo completas se proveen a la workstation vía catalogoVariantes para el modal de agregar.
   const variantesBulto = useMemo(() => {
     const map = new Map<string, any>();
 
-    // 1. Variantes de los detalles de lote guardados/recibidos
+    // Únicamente variantes que ya están en los detalles de este lote
     for (const d of detalles) {
       const vp = d.variantes_producto;
       if (vp && vp.id) {
@@ -308,21 +310,8 @@ export function LoteDetalleView({
       }
     }
 
-    // 2. Variantes del catálogo asociadas a los productos del lote
-    const prodIds = new Set(productosLote.map((p) => p.id));
-    for (const v of variantes) {
-      if (prodIds.has(v.producto_id)) {
-        const c = v.color ? v.color.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
-        if (!(c === "estandar" && (!v.talla || v.talla.trim() === ""))) {
-          if (!map.has(v.id)) {
-            map.set(v.id, v);
-          }
-        }
-      }
-    }
-
     return Array.from(map.values());
-  }, [variantes, productosLote, detalles]);
+  }, [detalles]);
 
   // Cálculos robustos del lote para métricas y cards
   const totalCantidad = detalles.reduce(
@@ -811,6 +800,7 @@ export function LoteDetalleView({
           lote={lote}
           productosLote={productosLote}
           catalogoProductos={productos}
+          catalogoVariantes={variantes}
           variantesProducto={variantesBulto}
           detallesActuales={detalles}
           soloDesglose={soloDesglose}

@@ -77,6 +77,7 @@ interface Props {
   };
   productosLote: ProductoLoteInfo[];
   catalogoProductos: { id: string; nombre: string; codigo_interno: string }[];
+  catalogoVariantes?: VarianteOption[];
   variantesProducto: VarianteOption[];
   detallesActuales: {
     id?: string;
@@ -152,6 +153,7 @@ export function LoteContarWorkstation({
   lote,
   productosLote = [],
   catalogoProductos = [],
+  catalogoVariantes = [],
   variantesProducto: initialVariantes = [],
   detallesActuales = [],
   soloDesglose = false,
@@ -184,6 +186,27 @@ export function LoteContarWorkstation({
     });
     return initial;
   });
+
+  // Catálogo completo de variantes disponibles para el modal (combina catálogo global + del lote + creadas en caliente)
+  const todasLasVariantesCatalogo = useMemo(() => {
+    const map = new Map<string, VarianteOption>();
+    for (const v of catalogoVariantes) {
+      if (v?.id && !isEstandar(v.color, v.talla)) {
+        map.set(v.id, v);
+      }
+    }
+    for (const v of initialVariantes) {
+      if (v?.id && !isEstandar(v.color, v.talla) && !map.has(v.id)) {
+        map.set(v.id, v);
+      }
+    }
+    for (const v of localVariantes) {
+      if (v?.id && !isEstandar(v.color, v.talla)) {
+        map.set(v.id, v);
+      }
+    }
+    return Array.from(map.values());
+  }, [catalogoVariantes, initialVariantes, localVariantes]);
 
   // Control para abrir el formulario de "+ Agregar color / talla"
   const [isAddingVariant, setIsAddingVariant] = useState(false);
@@ -1291,7 +1314,7 @@ export function LoteContarWorkstation({
         onOpenChange={setShowAddVariantsModal}
         producto={activeStat ? activeStat.prod : null}
         catalogoProductos={catalogoProductos}
-        variantesCatalogo={initialVariantes}
+        variantesCatalogo={todasLasVariantesCatalogo}
         conteosActuales={conteos}
         onAgregarVariantes={handleAgregarVariantesBatch}
       />
