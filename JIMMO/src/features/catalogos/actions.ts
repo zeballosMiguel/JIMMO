@@ -410,14 +410,24 @@ export async function crearVarianteDirecta(input: CrearVarianteDirectaInput) {
   let skuFinal = input.sku && input.sku.trim() !== "" ? input.sku.trim() : null;
   const supabase = await createClient();
 
-  if (!skuFinal) {
-    const { data: prodDb } = await supabase
-      .from("productos")
-      .select("codigo_interno, nombre")
-      .eq("id", input.producto_id)
-      .maybeSingle();
+  // Siempre resolver codigo_interno desde el DB para garantizar el prefijo correcto
+  const { data: prodDb } = await supabase
+    .from("productos")
+    .select("codigo_interno, nombre")
+    .eq("id", input.producto_id)
+    .maybeSingle();
 
-    const baseCode = (prodDb?.codigo_interno || "").trim().toUpperCase() || (prodDb?.nombre || "PRD").slice(0, 3).toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const codigoInternoDb = (prodDb?.codigo_interno ?? "").trim();
+  const baseCodeDb = codigoInternoDb.length > 0
+    ? codigoInternoDb.toUpperCase().replace(/[^A-Z0-9]/g, "")
+    : (prodDb?.nombre || "PRD")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]/g, "")
+        .substring(0, 3)
+        .toUpperCase();
+
+  if (!skuFinal) {
     const colorAbbr = input.color
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
@@ -432,7 +442,7 @@ export async function crearVarianteDirecta(input: CrearVarianteDirectaInput) {
           .substring(0, 4)
           .toUpperCase()
       : "UNI";
-    skuFinal = `${baseCode}-${colorAbbr}-${tallaAbbr}`;
+    skuFinal = `${baseCodeDb}-${colorAbbr}-${tallaAbbr}`;
   }
 
   const parsed = varianteSchema.safeParse({
@@ -470,6 +480,31 @@ export async function crearVarianteDirecta(input: CrearVarianteDirectaInput) {
       const { data: existingSameProduct } = await existingQuery.maybeSingle();
 
       if (existingSameProduct) {
+        // Verificar si el SKU existente usa el prefijo correcto del codigo_interno
+        const expectedSkuStart = `${baseCodeDb}-`;
+        if (existingSameProduct.sku && !existingSameProduct.sku.startsWith(expectedSkuStart)) {
+          // SKU incorrecto (de un intento anterior sin codigo_interno) → corregirlo
+          const colorAbbrFix = input.color
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "")
+            .substring(0, 3).toUpperCase();
+          const tallaAbbrFix = (parsed.data.talla ?? "")
+            ? (parsed.data.talla!).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "")
+                .substring(0, 4).toUpperCase()
+            : "UNI";
+          const correctSku = `${baseCodeDb}-${colorAbbrFix}-${tallaAbbrFix}`;
+
+          const { data: updated } = await supabase
+            .from("variantes_producto")
+            .update({ sku: correctSku })
+            .eq("id", existingSameProduct.id)
+            .select("id, producto_id, color, talla, sku, stock_actual, stock_minimo")
+            .maybeSingle();
+
+          revalidatePath("/catalogos");
+          revalidatePath("/catalogos/variantes");
+          revalidatePath("/lotes");
+          return { success: true, variante: updated ?? { ...existingSameProduct, sku: correctSku } };
+        }
         return { success: true, variante: existingSameProduct };
       }
 
@@ -488,10 +523,17 @@ export async function crearVarianteDirecta(input: CrearVarianteDirectaInput) {
       }
 
       // 3️⃣ El SKU colisionó con OTRA variante o producto diferente (ej. dos productos llamados Impermeable...)
-      // Generar automáticamente un SKU único para este producto y reintentar
-      const baseSku = (parsed.data.sku || `${input.color.slice(0, 3)}-${tallaFiltro || "U"}`)
-        .toUpperCase()
-        .replace(/[^A-Z0-9-]/g, "");
+      // Generar automáticamente un SKU único usando el codigo_interno real del DB + sufijo
+      const colorAbbrRetry = input.color
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]/g, "")
+        .substring(0, 3)
+        .toUpperCase();
+      const tallaAbbrRetry = tallaFiltro
+        ? tallaFiltro.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "").substring(0, 4).toUpperCase()
+        : "UNI";
+      const baseSku = `${baseCodeDb}-${colorAbbrRetry}-${tallaAbbrRetry}`;
 
       let inserted = null;
       let lastErr = null;

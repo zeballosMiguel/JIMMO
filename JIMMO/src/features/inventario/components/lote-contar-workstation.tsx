@@ -7,6 +7,7 @@ import { desglosarYRecibirLote, soloDesgloseDetalleLote, type DesgloseVarianteIt
 import { crearVarianteDirecta } from "@/features/catalogos/actions";
 import { EditarProductoLoteDialog } from "@/features/inventario/editar-producto-lote-dialog";
 import { AgregarProductoLoteDialog } from "@/features/inventario/components/agregar-producto-lote-dialog";
+import { AgregarVariantesLoteDialog } from "@/features/inventario/components/agregar-variantes-lote-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -186,6 +187,7 @@ export function LoteContarWorkstation({
 
   // Control para abrir el formulario de "+ Agregar color / talla"
   const [isAddingVariant, setIsAddingVariant] = useState(false);
+  const [showAddVariantsModal, setShowAddVariantsModal] = useState(false);
   const [nuevoColor, setNuevoColor] = useState("");
   const [nuevaTalla, setNuevaTalla] = useState("");
   const [nuevaCantidad, setNuevaCantidad] = useState("1");
@@ -198,6 +200,37 @@ export function LoteContarWorkstation({
 
   // Diálogo de confirmación para ingreso parcial
   const [showConfirmacionIncompleto, setShowConfirmacionIncompleto] = useState(false);
+
+  // Función para agregar variantes (seleccionadas o recién creadas) en lote
+  function handleAgregarVariantesBatch(items: { variante: VarianteOption; cantidad: number }[]) {
+    if (items.length === 0) return;
+
+    // 1. Integrar variantes a localVariantes asegurando que no se dupliquen
+    setLocalVariantes((prev) => {
+      const map = new Map<string, VarianteOption>();
+      for (const v of prev) {
+        if (v.id) map.set(v.id, v);
+      }
+      for (const item of items) {
+        if (item.variante.id) {
+          const existing = map.get(item.variante.id);
+          map.set(item.variante.id, existing ? { ...existing, ...item.variante } : item.variante);
+        }
+      }
+      return Array.from(map.values());
+    });
+
+    // 2. Incrementar / asignar los conteos
+    setConteos((prev) => {
+      const next = { ...prev };
+      for (const item of items) {
+        if (item.variante.id) {
+          next[item.variante.id] = (next[item.variante.id] || 0) + item.cantidad;
+        }
+      }
+      return next;
+    });
+  }
 
   // Eliminar variante de la lista local
   function handleEliminarVariante(varianteId: string) {
@@ -396,17 +429,17 @@ export function LoteContarWorkstation({
       (cp) => String(cp.id || "").toLowerCase() === String(productoId || "").toLowerCase()
     );
 
-    const baseCode = resolveProductCode(productoId, prodInfo, catalogoProductos);
-    const colorPart = getAbbreviation(nuevoColor.trim(), 3);
-    const tallaPart = tallaFinal === "UNICA" || tallaFinal === "Única" ? "UNI" : getAbbreviation(tallaFinal, 4);
-    const autoSku = `${baseCode}-${colorPart}-${tallaPart}`;
+    // No calculamos el SKU en el cliente — el servidor lo genera
+    // directamente del codigo_interno real en la DB (fuente de verdad).
+    // Así evitamos que cualquier problema de hidratación del prop
+    // codigo_interno resulte en un SKU con prefijo incorrecto.
 
     startTransition(async () => {
       const res = await crearVarianteDirecta({
         producto_id: productoId,
         color: nuevoColor.trim(),
         talla: tallaFinal,
-        sku: autoSku,
+        // sku: omitido → servidor lo calcula desde DB
       });
 
       if (res?.error) {
@@ -415,16 +448,17 @@ export function LoteContarWorkstation({
       }
 
       const varianteDb = res.variante!;
+      const resolvedCodigo = catProd?.codigo_interno || prodInfo?.codigo_interno || "";
       const created: VarianteOption = {
         id: varianteDb.id,
         color: varianteDb.color || nuevoColor.trim(),
         talla: varianteDb.talla || tallaFinal,
-        sku: varianteDb.sku || autoSku,
+        sku: varianteDb.sku || "",
         producto_id: varianteDb.producto_id || productoId,
         productos: {
           id: productoId,
           nombre: prodInfo?.nombre || catProd?.nombre || "Producto",
-          codigo_interno: baseCode,
+          codigo_interno: resolvedCodigo,
         },
       };
 
@@ -1045,16 +1079,13 @@ export function LoteContarWorkstation({
                         </div>
                       </div>
                     ) : (
-                      <div className="p-3 bg-muted/20 border-t border-border flex justify-center">
+                      <div className="p-3 bg-muted/20 border-t border-border flex justify-center items-center gap-3">
                         <button
                           type="button"
                           onClick={() => {
-                            setIsAddingVariant(true);
-                            setNuevoColor("");
-                            setNuevaTalla("");
-                            setNuevaCantidad("1");
+                            setShowAddVariantsModal(true);
                           }}
-                          className="inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-bold py-1 px-3 rounded-lg hover:bg-primary/5 transition-colors"
+                          className="inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-bold py-1.5 px-3.5 rounded-lg bg-primary/10 hover:bg-primary/15 transition-colors shadow-2xs"
                         >
                           <Plus className="w-3.5 h-3.5" />
                           + Agregar color / talla
@@ -1253,6 +1284,17 @@ export function LoteContarWorkstation({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── MODAL ELECCIÓN DE VARIANTES EXISTENTES / CREACIÓN EN LOTE ───────── */}
+      <AgregarVariantesLoteDialog
+        open={showAddVariantsModal}
+        onOpenChange={setShowAddVariantsModal}
+        producto={activeStat ? activeStat.prod : null}
+        catalogoProductos={catalogoProductos}
+        variantesCatalogo={initialVariantes}
+        conteosActuales={conteos}
+        onAgregarVariantes={handleAgregarVariantesBatch}
+      />
     </div>
   );
 }
