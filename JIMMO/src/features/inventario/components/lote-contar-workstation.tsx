@@ -93,6 +93,15 @@ function isEstandar(color?: string | null, talla?: string | null) {
   return c === "estandar" && (!talla || talla.trim() === "");
 }
 
+function getAbbreviation(text: string, len: number = 3): string {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .substring(0, len)
+    .toUpperCase();
+}
+
 // Iniciales o miniatura a partir del código interno
 function getProductCodeBadge(codigoInterno?: string | null, nombre?: string): string {
   if (codigoInterno && codigoInterno.trim()) {
@@ -106,17 +115,36 @@ function getProductCodeBadge(codigoInterno?: string | null, nombre?: string): st
   return nombre.slice(0, 3).toUpperCase();
 }
 
+// Resuelve el código interno canónico del producto (prioriza codigo_interno del catálogo)
+function resolveProductCode(
+  prodId?: string | null,
+  prodInfo?: ProductoLoteInfo | null,
+  catalogo?: { id: string; codigo_interno?: string | null; nombre?: string }[]
+): string {
+  if (prodInfo?.codigo_interno && prodInfo.codigo_interno.trim()) {
+    return prodInfo.codigo_interno.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  }
+  const idABuscar = prodId || prodInfo?.id;
+  if (idABuscar && catalogo) {
+    const cat = catalogo.find((c) => String(c.id).toLowerCase() === String(idABuscar).toLowerCase());
+    if (cat?.codigo_interno && cat.codigo_interno.trim()) {
+      return cat.codigo_interno.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+    }
+  }
+  return getProductCodeBadge(prodInfo?.codigo_interno, prodInfo?.nombre).replace(/[^A-Z0-9]/g, "");
+}
+
 // SKU automático para variantes
-function getVariantSku(v: VarianteOption, prod?: ProductoLoteInfo | null): string {
+function getVariantSku(
+  v: VarianteOption,
+  prod?: ProductoLoteInfo | null,
+  catalogo?: { id: string; codigo_interno?: string | null; nombre?: string }[]
+): string {
   if (v.sku && v.sku.trim()) return v.sku.trim();
-  const prefix = getProductCodeBadge(prod?.codigo_interno, prod?.nombre).replace(/[^A-Z0-9]/g, "");
-  const idHash = prod?.id ? prod.id.replace(/-/g, "").slice(0, 3).toUpperCase() : "";
-  const colorPart = v.color
-    .slice(0, 3)
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "");
-  const tallaPart = v.talla ? `-${v.talla.toUpperCase().trim()}` : "";
-  return `${prefix}${idHash ? `-${idHash}` : ""}-${colorPart}${tallaPart}`;
+  const baseCode = resolveProductCode(v.producto_id, prod, catalogo);
+  const colorPart = getAbbreviation(v.color || "", 3);
+  const tallaPart = v.talla ? getAbbreviation(v.talla, 4) : "UNI";
+  return `${baseCode}-${colorPart}-${tallaPart}`;
 }
 
 export function LoteContarWorkstation({
@@ -364,11 +392,14 @@ export function LoteContarWorkstation({
     const prodInfo = localProductos.find(
       (p) => String(p.id || "").toLowerCase() === String(productoId || "").toLowerCase()
     );
-    const prefix = getProductCodeBadge(prodInfo?.codigo_interno, prodInfo?.nombre).replace(/[^A-Z0-9]/g, "");
-    const idHash = prodInfo?.id ? prodInfo.id.replace(/-/g, "").slice(0, 3).toUpperCase() : "";
-    const colorPart = nuevoColor.trim().slice(0, 3).toUpperCase().replace(/[^A-Z0-9]/g, "");
-    const tallaPart = `-${tallaFinal.toUpperCase()}`;
-    const autoSku = `${prefix}${idHash ? `-${idHash}` : ""}-${colorPart}${tallaPart}`;
+    const catProd = catalogoProductos.find(
+      (cp) => String(cp.id || "").toLowerCase() === String(productoId || "").toLowerCase()
+    );
+
+    const baseCode = resolveProductCode(productoId, prodInfo, catalogoProductos);
+    const colorPart = getAbbreviation(nuevoColor.trim(), 3);
+    const tallaPart = tallaFinal === "UNICA" || tallaFinal === "Única" ? "UNI" : getAbbreviation(tallaFinal, 4);
+    const autoSku = `${baseCode}-${colorPart}-${tallaPart}`;
 
     startTransition(async () => {
       const res = await crearVarianteDirecta({
@@ -390,9 +421,11 @@ export function LoteContarWorkstation({
         talla: varianteDb.talla || tallaFinal,
         sku: varianteDb.sku || autoSku,
         producto_id: varianteDb.producto_id || productoId,
-        productos: prodInfo
-          ? { id: prodInfo.id, nombre: prodInfo.nombre, codigo_interno: prodInfo.codigo_interno || "" }
-          : null,
+        productos: {
+          id: productoId,
+          nombre: prodInfo?.nombre || catProd?.nombre || "Producto",
+          codigo_interno: baseCode,
+        },
       };
 
       setLocalVariantes((prev) => {
@@ -846,7 +879,7 @@ export function LoteContarWorkstation({
                   <div className="divide-y divide-border/60">
                     {activeStat.vars.map((v) => {
                       const cant = conteos[v.id] || 0;
-                      const skuDisplay = getVariantSku(v, activeStat.prod);
+                      const skuDisplay = getVariantSku(v, activeStat.prod, catalogoProductos);
 
                       return (
                         <div

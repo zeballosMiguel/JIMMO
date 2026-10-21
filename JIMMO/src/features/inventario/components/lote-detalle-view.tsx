@@ -192,10 +192,11 @@ export function LoteDetalleView({
     if (Array.isArray(lote.productos_compra)) {
       for (const p of lote.productos_compra) {
         if (p.producto_id) {
+          const catProd = productos.find((cp) => cp.id === p.producto_id);
           map.set(p.producto_id, {
             id: p.producto_id,
-            nombre: p.nombre_producto || "Producto",
-            codigo_interno: p.codigo_interno || null,
+            nombre: catProd?.nombre || p.nombre_producto || "Producto",
+            codigo_interno: catProd?.codigo_interno || p.codigo_interno || null,
             cantidad_estimada: Number(p.cantidad ?? p.cantidad_estimada) || undefined,
             costo_usd: Number(p.costo_total_usd ?? p.costo_usd) || undefined,
             otros_costos_bs: Number(p.otros_costos_bs) || undefined,
@@ -269,7 +270,18 @@ export function LoteDetalleView({
       });
     }
 
-    // (No fallback al primer producto del catálogo — si no hay datos reales, devolver vacío)
+    // 5. Garantizar que todos los productos en map tengan codigo_interno y nombre actualizados del catálogo
+    for (const [id, item] of map.entries()) {
+      const catProd = productos.find((cp) => cp.id === id);
+      if (catProd) {
+        if (!item.codigo_interno && catProd.codigo_interno) {
+          item.codigo_interno = catProd.codigo_interno;
+        }
+        if (!item.nombre && catProd.nombre) {
+          item.nombre = catProd.nombre;
+        }
+      }
+    }
 
     return Array.from(map.values());
   }, [lote, detalles, productos]);

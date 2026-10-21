@@ -407,15 +407,43 @@ export async function crearVarianteDirecta(input: CrearVarianteDirectaInput) {
   } catch (err: any) {
     return { error: err.message || "Acceso denegado" };
   }
+  let skuFinal = input.sku && input.sku.trim() !== "" ? input.sku.trim() : null;
+  const supabase = await createClient();
+
+  if (!skuFinal) {
+    const { data: prodDb } = await supabase
+      .from("productos")
+      .select("codigo_interno, nombre")
+      .eq("id", input.producto_id)
+      .maybeSingle();
+
+    const baseCode = (prodDb?.codigo_interno || "").trim().toUpperCase() || (prodDb?.nombre || "PRD").slice(0, 3).toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const colorAbbr = input.color
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9]/g, "")
+      .substring(0, 3)
+      .toUpperCase();
+    const tallaAbbr = input.talla
+      ? input.talla
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-zA-Z0-9]/g, "")
+          .substring(0, 4)
+          .toUpperCase()
+      : "UNI";
+    skuFinal = `${baseCode}-${colorAbbr}-${tallaAbbr}`;
+  }
+
   const parsed = varianteSchema.safeParse({
     producto_id: input.producto_id,
     color: input.color,
     talla: input.talla && input.talla.trim() !== "" ? input.talla.trim() : null,
-    sku: input.sku && input.sku.trim() !== "" ? input.sku.trim() : null,
+    sku: skuFinal,
     stock_minimo: input.stock_minimo ?? 0,
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
-  const supabase = await createClient();
+
   const { data, error } = await supabase
     .from("variantes_producto")
     .insert(parsed.data)
