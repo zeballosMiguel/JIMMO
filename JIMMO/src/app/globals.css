@@ -182,3 +182,27 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(220, 38, 38, 0.7);
 }
+
+/* Scrollbar ultra discreto para tarjetas y chips */
+.scrollbar-mini {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.2) transparent;
+}
+.scrollbar-mini::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+}
+.scrollbar-mini::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-mini::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+.scrollbar-mini:hover::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.45);
+}
+.scrollbar-mini::-webkit-scrollbar-thumb:hover {
+  background: rgba(220, 38, 38, 0.7);
+}

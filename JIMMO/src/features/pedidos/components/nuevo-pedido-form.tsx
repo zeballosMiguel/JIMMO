@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useTransition, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -38,6 +38,9 @@ import {
   AlertCircle,
   RefreshCw,
   Clock,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -140,6 +143,48 @@ export function NuevoPedidoForm({
   // Productos / Variantes Filtros
   const [activeCategory, setActiveCategory] = useState<string>("Todos");
   const [productSearch, setProductSearch] = useState<string>("");
+
+  // Referencias y estados para el slider horizontal de categorías
+  const categoryTabsRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [hasCategoryOverflow, setHasCategoryOverflow] = useState(false);
+
+  // Estado para tarjetas de producto expandidas (productos con muchas variantes)
+  const [expandedProductIds, setExpandedProductIds] = useState<Set<string>>(new Set());
+
+  const toggleProductExpand = (productId: string) => {
+    setExpandedProductIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(productId)) {
+        next.delete(productId);
+      } else {
+        next.add(productId);
+      }
+      return next;
+    });
+  };
+
+  const checkCategoryScroll = () => {
+    const el = categoryTabsRef.current;
+    if (!el) return;
+    const hasOverflow = el.scrollWidth > el.clientWidth + 4;
+    setHasCategoryOverflow(hasOverflow);
+    setCanScrollLeft(el.scrollLeft > 6);
+    setCanScrollRight(hasOverflow && el.scrollLeft < el.scrollWidth - el.clientWidth - 6);
+  };
+
+  const handleScrollCategories = (direction: "left" | "right") => {
+    const el = categoryTabsRef.current;
+    if (!el) return;
+    const amount = direction === "left" ? -180 : 180;
+    el.scrollBy({ left: amount, behavior: "smooth" });
+  };
+
+  const handleSelectCategory = (cat: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    setActiveCategory(cat);
+    e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  };
 
   // Items en la orden
   const [items, setItems] = useState<CartItem[]>([]);
@@ -244,6 +289,17 @@ export function NuevoPedidoForm({
     });
     return Array.from(set);
   }, [categorias, catalogProducts]);
+
+  useEffect(() => {
+    checkCategoryScroll();
+    const handleResize = () => checkCategoryScroll();
+    window.addEventListener("resize", handleResize);
+    const timer = setTimeout(checkCategoryScroll, 100);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      clearTimeout(timer);
+    };
+  }, [categoryTabs]);
 
   // Filtrar productos por tab y por texto de búsqueda
   const filteredProducts = useMemo(() => {
@@ -499,7 +555,7 @@ export function NuevoPedidoForm({
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_390px] xl:grid-cols-[1fr_420px] gap-6 items-start">
 
         {/* COLUMNA IZQUIERDA: CLIENTE + PRODUCTOS */}
-        <div className="space-y-6">
+        <div className="space-y-6 min-w-0">
 
           {/* SECCIÓN 1: DATOS DEL CLIENTE */}
           <div className="bg-card border border-border/80 rounded-2xl p-5 shadow-sm space-y-4">
@@ -635,33 +691,65 @@ export function NuevoPedidoForm({
           </div>
 
           {/* SECCIÓN 2: SELECCIÓN DE PRODUCTOS & VARIANTES */}
-          <div className="bg-card border border-border/80 rounded-2xl p-5 shadow-sm space-y-4">
-            {/* Header con icono y Tabs de Categorías */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
+          <div className="bg-card border border-border/80 rounded-2xl p-5 shadow-sm space-y-4 min-w-0">
+            {/* Header con icono y Slider de Categorías */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0">
+              <div className="flex items-center gap-2.5 shrink-0">
                 <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center shrink-0 border border-rose-100">
                   <Layers className="w-4 h-4 text-rose-500" />
                 </div>
-                <h2 className="font-bold text-foreground text-sm sm:text-base">
+                <h2 className="font-bold text-foreground text-sm sm:text-base whitespace-nowrap">
                   2. Selección de Productos &amp; Variantes
                 </h2>
               </div>
 
-              {/* Categorías Pills */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-                {categoryTabs.map((cat) => (
+              {/* Categorías Slider con controles de desplazamiento */}
+              <div className="flex items-center gap-1 min-w-0 flex-1 justify-start sm:justify-end">
+                {hasCategoryOverflow && (
                   <button
-                    key={cat}
                     type="button"
-                    onClick={() => setActiveCategory(cat)}
-                    className={`text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap transition-all ${activeCategory === cat
-                      ? "bg-zinc-950 text-white shadow-sm"
-                      : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground"
-                      }`}
+                    disabled={!canScrollLeft}
+                    onClick={() => handleScrollCategories("left")}
+                    className="w-7 h-7 rounded-full bg-background border border-border/80 shadow-xs flex items-center justify-center text-muted-foreground hover:text-foreground shrink-0 transition-all disabled:opacity-20 disabled:cursor-default hover:bg-muted"
+                    aria-label="Desplazar categorías hacia la izquierda"
+                    title="Anteriores categorías"
                   >
-                    {cat}
+                    <ChevronLeft className="w-4 h-4" />
                   </button>
-                ))}
+                )}
+
+                <div
+                  ref={categoryTabsRef}
+                  onScroll={checkCategoryScroll}
+                  className="flex items-center gap-1.5 overflow-x-auto scroll-smooth scrollbar-none py-1 px-0.5 min-w-0"
+                >
+                  {categoryTabs.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={(e) => handleSelectCategory(cat, e)}
+                      className={`text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap transition-all shrink-0 ${activeCategory === cat
+                        ? "bg-zinc-950 text-white shadow-sm"
+                        : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground"
+                        }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                {hasCategoryOverflow && (
+                  <button
+                    type="button"
+                    disabled={!canScrollRight}
+                    onClick={() => handleScrollCategories("right")}
+                    className="w-7 h-7 rounded-full bg-background border border-border/80 shadow-xs flex items-center justify-center text-muted-foreground hover:text-foreground shrink-0 transition-all disabled:opacity-20 disabled:cursor-default hover:bg-muted"
+                    aria-label="Desplazar categorías hacia la derecha"
+                    title="Más categorías"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -692,69 +780,127 @@ export function NuevoPedidoForm({
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {filteredProducts.map((prod) => (
-                  <div
-                    key={prod.id}
-                    className="bg-card border border-border/80 rounded-2xl p-4 flex flex-col justify-between hover:border-zinc-400 hover:shadow-sm transition-all group"
-                  >
-                    <div>
-                      {/* SKU & Stock Badges */}
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="bg-zinc-950 text-white font-mono text-[11px] font-bold px-2.5 py-0.5 rounded-full">
-                          {prod.codigo_interno}
-                        </span>
-                        <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px] px-2.5 py-0.5 rounded-full">
-                          {prod.total_stock} disp.
-                        </span>
-                      </div>
+                {filteredProducts.map((prod) => {
+                  const isExpanded = expandedProductIds.has(prod.id);
+                  const hasManyVariants = prod.variantes.length > 4;
 
-                      {/* Nombre y descripción */}
-                      <h3 className="font-bold text-sm text-foreground mt-2.5 line-clamp-1 group-hover:text-primary transition-colors">
-                        {prod.nombre}
-                      </h3>
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 min-h-[32px]">
-                        {prod.categoria_nombre}
-                      </p>
-
-                      {/* Etiqueta de selección rápida */}
-                      <p className="text-[11px] font-semibold text-muted-foreground mt-3 mb-2">
-                        Selección Rápida de Variante:
-                      </p>
-
-                      {/* Chips de variantes */}
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {prod.variantes.map((v) => {
-                          const cartItem = items.find((it) => it.variante_id === v.id);
-                          const isOutOfStock = v.stock_disponible <= 0;
-                          return (
-                            <button
-                              key={v.id}
-                              type="button"
-                              disabled={isOutOfStock}
-                              onClick={() => handleAddVariant(v)}
-                              className={`text-left text-xs p-1.5 rounded-lg border transition-all flex items-center justify-between gap-1 ${isOutOfStock
-                                ? "opacity-40 cursor-not-allowed border-border/40 bg-muted/20 text-muted-foreground"
-                                : cartItem
-                                  ? "border-zinc-950 bg-zinc-950 text-white shadow-xs font-semibold"
-                                  : "border-border hover:border-zinc-400 bg-background text-foreground hover:bg-muted/40"
+                  return (
+                    <div
+                      key={prod.id}
+                      className={`bg-card border border-border/80 rounded-2xl p-4 flex flex-col justify-between hover:border-zinc-400 hover:shadow-sm transition-all group ${
+                        isExpanded ? "ring-1 ring-zinc-300 dark:ring-zinc-700" : ""
+                      }`}
+                    >
+                      <div>
+                        {/* SKU & Stock Badges + Pestañita discreta superior */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="bg-zinc-950 text-white font-mono text-[11px] font-bold px-2.5 py-0.5 rounded-full shrink-0">
+                              {prod.codigo_interno}
+                            </span>
+                            {hasManyVariants && (
+                              <button
+                                type="button"
+                                onClick={() => toggleProductExpand(prod.id)}
+                                title={
+                                  isExpanded
+                                    ? "Mostrar menos variantes"
+                                    : `Ver todas las ${prod.variantes.length} variantes`
+                                }
+                                className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-all ${
+                                  isExpanded
+                                    ? "bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900"
+                                    : "bg-muted/60 text-muted-foreground border-border/60 hover:bg-muted hover:text-foreground hover:border-border"
                                 }`}
+                              >
+                                <span>{isExpanded ? "Menos" : `+${prod.variantes.length - 4}`}</span>
+                                <ChevronDown
+                                  className={`w-3 h-3 transition-transform duration-200 ${
+                                    isExpanded ? "rotate-180" : ""
+                                  }`}
+                                />
+                              </button>
+                            )}
+                          </div>
+
+                          <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px] px-2.5 py-0.5 rounded-full shrink-0">
+                            {prod.total_stock} disp.
+                          </span>
+                        </div>
+
+                        {/* Nombre y categoría */}
+                        <h3 className="font-bold text-sm text-foreground mt-2.5 line-clamp-1 group-hover:text-primary transition-colors">
+                          {prod.nombre}
+                        </h3>
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                          {prod.categoria_nombre}
+                        </p>
+
+                        {/* Etiqueta de selección rápida con toggle discreto */}
+                        <div className="flex items-center justify-between mt-3 mb-2">
+                          <p className="text-[11px] font-semibold text-muted-foreground">
+                            Variantes ({prod.variantes.length}):
+                          </p>
+                          {hasManyVariants && (
+                            <button
+                              type="button"
+                              onClick={() => toggleProductExpand(prod.id)}
+                              className="text-[11px] font-medium text-muted-foreground hover:text-foreground flex items-center gap-0.5 transition-colors"
                             >
-                              <span className="truncate text-[11px]">
-                                {v.color || "Color"} / {v.talla || "U"}
-                              </span>
-                              <span
-                                className={`text-[10px] font-mono shrink-0 ${cartItem ? "text-zinc-300 font-bold" : "text-muted-foreground"
+                              <span>{isExpanded ? "Ver menos" : `Ver todas (${prod.variantes.length})`}</span>
+                              <ChevronDown
+                                className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                                  isExpanded ? "rotate-180" : ""
+                                }`}
+                              />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Chips de variantes: tamaño fijo uniforme con scroll o desplegado completo */}
+                        <div
+                          className={`grid grid-cols-2 gap-1.5 transition-all duration-300 pr-1 ${
+                            isExpanded
+                              ? "max-h-[360px] overflow-y-auto scrollbar-mini"
+                              : hasManyVariants
+                              ? "max-h-[82px] overflow-y-auto scrollbar-mini"
+                              : ""
+                          }`}
+                        >
+                          {prod.variantes.map((v) => {
+                            const cartItem = items.find((it) => it.variante_id === v.id);
+                            const isOutOfStock = v.stock_disponible <= 0;
+                            return (
+                              <button
+                                key={v.id}
+                                type="button"
+                                disabled={isOutOfStock}
+                                onClick={() => handleAddVariant(v)}
+                                title={`${v.color || "Color"} / ${v.talla || "U"} (Disponibles: ${v.stock_disponible})`}
+                                className={`text-left p-1.5 rounded-lg border transition-all flex items-center justify-between gap-1 ${isOutOfStock
+                                  ? "opacity-40 cursor-not-allowed border-border/40 bg-muted/20 text-muted-foreground"
+                                  : cartItem
+                                    ? "border-zinc-950 bg-zinc-950 text-white shadow-xs font-semibold"
+                                    : "border-border hover:border-zinc-400 bg-background text-foreground hover:bg-muted/40"
                                   }`}
                               >
-                                {cartItem ? `x${cartItem.cantidad}` : `(${v.stock_disponible})`}
-                              </span>
-                            </button>
-                          );
-                        })}
+                                <span className="truncate text-[10px] leading-tight font-medium">
+                                  {v.color || "Color"} / {v.talla || "U"}
+                                </span>
+                                <span
+                                  className={`text-[9px] font-mono shrink-0 tracking-tight ${cartItem ? "text-zinc-300 font-bold" : "text-muted-foreground"
+                                    }`}
+                                >
+                                  {cartItem ? `x${cartItem.cantidad}` : `(${v.stock_disponible})`}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

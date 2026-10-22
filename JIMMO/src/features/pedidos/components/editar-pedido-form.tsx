@@ -562,7 +562,8 @@ export function EditarPedidoForm({
                           type="button"
                           disabled={isOutOfStock}
                           onClick={() => handleAddVariant(v)}
-                          className={`text-left text-xs p-1.5 rounded-lg border transition-all flex items-center justify-between gap-1 ${
+                          title={`${v.color || "Color"} / ${v.talla || "U"} (Disponibles: ${v.stock_disponible})`}
+                          className={`text-left p-1.5 rounded-lg border transition-all flex items-center justify-between gap-1 ${
                             isOutOfStock
                               ? "opacity-40 cursor-not-allowed border-border/40 bg-muted/20 text-muted-foreground"
                               : cartItem
@@ -570,10 +571,10 @@ export function EditarPedidoForm({
                               : "border-border hover:border-zinc-400 bg-card text-foreground hover:bg-muted/40"
                           }`}
                         >
-                          <span className="truncate text-[10px]">
+                          <span className="truncate text-[10px] leading-tight font-medium">
                             {v.color || "Color"} / {v.talla || "U"}
                           </span>
-                          <span className={`text-[10px] font-mono shrink-0 ${cartItem ? "text-zinc-300 font-bold" : "text-muted-foreground"}`}>
+                          <span className={`text-[9px] font-mono shrink-0 tracking-tight ${cartItem ? "text-zinc-300 font-bold" : "text-muted-foreground"}`}>
                             {cartItem ? `x${cartItem.cantidad}` : `(${v.stock_disponible})`}
                           </span>
                         </button>
