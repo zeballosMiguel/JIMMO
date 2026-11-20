@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { cancelarPedido } from "@/features/pedidos/actions";
+import { cancelarPedido, anularPedidoCompletado } from "@/features/pedidos/actions";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
@@ -18,25 +18,32 @@ export function PedidoEliminarButton({ pedidoId, numero, cliente, estado }: Prop
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  // Solo se pueden cancelar / eliminar pedidos RESERVADOS (libera reservas de stock)
-  // o ya CANCELADOS. Pedidos COMPLETADOS no deben borrarse directamente porque ya afectaron Kardex contable.
   const isReservado = estado === "RESERVADO";
+  const isCompletado = estado === "COMPLETADO";
 
   function handleConfirm() {
     startTransition(async () => {
-      const res = await cancelarPedido(pedidoId);
+      let res;
+      if (isCompletado) {
+        res = await anularPedidoCompletado(pedidoId);
+      } else {
+        res = await cancelarPedido(pedidoId);
+      }
+
       if (res?.error) {
         toast.error(res.error);
       } else {
         toast.success(
-          isReservado
-            ? `Pedido #${numero} cancelado y stock liberado correctamente`
-            : `Pedido #${numero} procesado correctamente`
+          isCompletado
+            ? `Pedido #${numero} anulado. Stock restaurado, pagos anulados y reportes actualizados.`
+            : `Pedido #${numero} cancelado y stock liberado correctamente`
         );
       }
       setConfirmOpen(false);
     });
   }
+
+  if (!isReservado && !isCompletado) return null;
 
   return (
     <>
@@ -44,7 +51,7 @@ export function PedidoEliminarButton({ pedidoId, numero, cliente, estado }: Prop
         variant="ghost"
         size="sm"
         className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
-        title="Cancelar / Eliminar pedido"
+        title={isCompletado ? "Anular venta completada" : "Cancelar / Eliminar pedido"}
         onClick={() => setConfirmOpen(true)}
       >
         <Trash2 className="w-4 h-4" />
@@ -53,13 +60,17 @@ export function PedidoEliminarButton({ pedidoId, numero, cliente, estado }: Prop
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title={`¿Eliminar / Cancelar Pedido #${numero}?`}
-        description={
-          isReservado
-            ? `El pedido #${numero} de "${cliente || "Cliente Ocasional"}" será cancelado inmediatamente. Todas las prendas reservadas serán liberadas y devueltas al inventario disponible, actualizando Dashboard, Reportes, Lotes y Clientes.`
-            : `El pedido #${numero} será marcado como cancelado. ¿Deseas continuar?`
+        title={
+          isCompletado
+            ? `⚠️ Anular Venta Completada #${numero}`
+            : `¿Eliminar / Cancelar Pedido #${numero}?`
         }
-        confirmLabel="Sí, eliminar pedido"
+        description={
+          isCompletado
+            ? `Esta acción revertirá COMPLETAMENTE la venta #${numero} de "${cliente || "Cliente Ocasional"}". Se restaurará el stock a los lotes originales, se anularán todos los pagos, se eliminarán los repartos de utilidad y los reportes/dashboard se actualizarán automáticamente. Esta acción NO se puede deshacer.`
+            : `El pedido #${numero} de "${cliente || "Cliente Ocasional"}" será cancelado. Todas las prendas reservadas serán liberadas al inventario.`
+        }
+        confirmLabel={isCompletado ? "Sí, anular venta" : "Sí, eliminar pedido"}
         cancelLabel="Cancelar"
         variant="destructive"
         loading={isPending}

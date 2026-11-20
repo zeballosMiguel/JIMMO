@@ -20,11 +20,25 @@ const estadoVariant: Record<string, "default" | "secondary" | "destructive" | "o
 export default async function PedidosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ estado?: string; q?: string }>;
+  searchParams: Promise<{ estado?: string; q?: string; devolucion?: string }>;
 }) {
-  const { estado, q } = await searchParams;
+  const { estado, q, devolucion } = await searchParams;
   const supabase = await createClient();
   const perfil = await getPerfil();
+
+  // Obtener IDs de pedidos con devoluciones registradas o notas de ajuste
+  const { data: devs } = await supabase.from("devoluciones").select("pedido_id");
+  const { data: pNotas } = await supabase
+    .from("pedidos")
+    .select("id")
+    .or("notas.ilike.%[Ajuste:%,notas.ilike.%DEVOLUCIÓN TOTAL%");
+
+  const idsConDevolucion = new Set<string>([
+    ...(devs || []).map((d) => d.pedido_id),
+    ...(pNotas || []).map((p) => p.id),
+  ]);
+
+  const esAdmin = perfil?.rol === "admin";
 
   let query = supabase
     .from("vw_pedidos")
@@ -47,12 +61,34 @@ export default async function PedidosPage({
     }
   }
 
-  if (estado) query = query.eq("estado", estado);
+  if (devolucion === "1") {
+    const listDevIds = Array.from(idsConDevolucion);
+    query = query.in(
+      "id",
+      listDevIds.length > 0 ? listDevIds : ["00000000-0000-0000-0000-000000000000"]
+    );
+  } else if (estado) {
+    query = query.eq("estado", estado);
+  }
+
   if (q) query = query.or(`cliente.ilike.%${q}%,vendedor.ilike.%${q}%`);
 
   const { data: pedidos } = await query;
 
   const pedidoIds = (pedidos || []).map((p) => p.id);
+
+  // Obtener notas de pedidos para identificar ajustes/devoluciones en badges
+  const { data: pedidosConNotas } = pedidoIds.length > 0
+    ? await supabase
+        .from("pedidos")
+        .select("id, notas")
+        .in("id", pedidoIds)
+    : { data: [] };
+
+  const notasByPedido: Record<string, string | null> = {};
+  for (const pn of pedidosConNotas || []) {
+    notasByPedido[pn.id] = pn.notas;
+  }
 
   // Obtener detalle de productos vendidos para cada pedido
   const { data: todosDetalles } = pedidoIds.length > 0
@@ -115,7 +151,7 @@ export default async function PedidosPage({
           <Link
             href="/pedidos"
             className={`px-3 py-1.5 rounded-md text-sm font-medium border transition-colors ${
-              !estado ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:border-primary"
+              !estado && !devolucion ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:border-primary"
             }`}
             id="filtro-todos"
           >
@@ -127,12 +163,21 @@ export default async function PedidosPage({
               href={`/pedidos?estado=${e}${q ? `&q=${q}` : ""}`}
               id={`filtro-${e.toLowerCase()}`}
               className={`px-3 py-1.5 rounded-md text-sm font-medium border transition-colors ${
-                estado === e ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:border-primary"
+                estado === e && !devolucion ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:border-primary"
               }`}
             >
               {e}
             </Link>
           ))}
+          <Link
+            href={`/pedidos?devolucion=1${q ? `&q=${q}` : ""}`}
+            id="filtro-devolucion"
+            className={`px-3 py-1.5 rounded-md text-sm font-medium border transition-colors ${
+              devolucion === "1" ? "bg-amber-600 text-white border-amber-600" : "bg-card border-border text-muted-foreground hover:border-amber-500 hover:text-amber-600"
+            }`}
+          >
+            Con Devolución
+          </Link>
         </div>
 
         {/* Buscador estilo Lotes */}
@@ -148,7 +193,7 @@ export default async function PedidosPage({
               id="pedidos-search"
             />
           </div>
-          {(estado || q) && (
+          {(estado || q || devolucion) && (
             <Link
               href="/pedidos"
               className="text-xs text-muted-foreground hover:text-foreground font-medium shrink-0"
@@ -180,7 +225,11 @@ export default async function PedidosPage({
               <TableRow>
                 <TableCell colSpan={10} className="text-center text-muted-foreground py-12">
                   <ShoppingBag className="w-8 h-8 mx-auto opacity-30 mb-2" />
-                  <p className="text-sm font-medium text-foreground">No hay ventas o pedidos en este filtro.</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {devolucion === "1"
+                      ? "No hay pedidos con devoluciones o cambios registrados."
+                      : "No hay ventas o pedidos en este filtro."}
+                  </p>
                 </TableCell>
               </TableRow>
             ) : (
@@ -255,38 +304,49 @@ export default async function PedidosPage({
                       Bs {Number(p.saldo).toLocaleString("es-VE", { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="align-top pt-3">
-                      <div className="flex flex-col gap-1 items-start">
-                        <Badge variant={estadoVariant[p.estado] ?? "secondary"}>
-                          {p.estado}
-                        </Badge>
-                        {p.notas && p.notas.includes("[Ajuste:") && (
-                          <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
-                            Ajustado
-                          </span>
-                        )}
-                        {p.notas && p.notas.includes("[VENTA ANULADA POR DEVOLUCIÓN TOTAL]") && (
-                          <span className="text-[10px] font-semibold text-destructive bg-destructive/10 px-1.5 py-0.5 rounded border border-destructive/20">
-                            Devolución Total
-                          </span>
-                        )}
-                      </div>
+                      {(() => {
+                        const notas = notasByPedido[p.id] || "";
+                        const esDev = idsConDevolucion.has(p.id);
+                        return (
+                          <div className="flex flex-col gap-1 items-start">
+                            <Badge variant={estadoVariant[p.estado] ?? "secondary"}>
+                              {p.estado}
+                            </Badge>
+                            {notas.includes("[Ajuste:") && (
+                              <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                                Ajustado
+                              </span>
+                            )}
+                            {notas.includes("[VENTA ANULADA POR DEVOLUCIÓN TOTAL]") && (
+                              <span className="text-[10px] font-semibold text-destructive bg-destructive/10 px-1.5 py-0.5 rounded border border-destructive/20">
+                                Devolución Total
+                              </span>
+                            )}
+                            {esDev && !notas.includes("[Ajuste:") && !notas.includes("[VENTA ANULADA POR DEVOLUCIÓN TOTAL]") && (
+                              <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                                Con Devolución
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="text-right align-top pt-2.5">
                       <div className="flex items-center justify-end gap-1">
                         <Link href={`/pedidos/${p.id}`} id={`pedido-ver-${p.id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
                           Ver
                         </Link>
-                        {p.estado === "RESERVADO" && (
+                        {(p.estado === "RESERVADO" || (p.estado === "COMPLETADO" && esAdmin)) && (
                           <Link
                             href={`/pedidos/${p.id}/editar`}
                             id={`pedido-edit-${p.id}`}
                             className={buttonVariants({ variant: "ghost", size: "sm" })}
-                            title="Editar pedido reservado"
+                            title={p.estado === "COMPLETADO" ? "Editar venta completada" : "Editar pedido reservado"}
                           >
                             <Pencil className="w-4 h-4" />
                           </Link>
                         )}
-                        {(p.estado === "RESERVADO" || p.estado === "CANCELADO") && (
+                        {(p.estado === "RESERVADO" || p.estado === "CANCELADO" || (p.estado === "COMPLETADO" && esAdmin)) && (
                           <PedidoEliminarButton
                             pedidoId={p.id}
                             numero={p.numero}

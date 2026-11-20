@@ -160,6 +160,84 @@ export async function cancelarPedido(pedidoId: string) {
 // Alias para retrocompatibilidad
 export const eliminarPedido = cancelarPedido;
 
+// ─── Anular pedido COMPLETADO ─────────────────────────────────
+export async function anularPedidoCompletado(pedidoId: string) {
+  try {
+    await requireAuth();
+  } catch (err: any) {
+    return { error: err.message || "No autenticado" };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("anular_pedido_completado" as any, {
+    p_pedido_id: pedidoId,
+  });
+  if (error) return { error: error.message };
+  revalidatePath(`/pedidos/${pedidoId}`);
+  revalidatePath("/pedidos");
+  revalidatePath("/dashboard");
+  revalidatePath("/clientes");
+  revalidatePath("/lotes");
+  revalidatePath("/inventario");
+  revalidatePath("/pagos");
+  revalidatePath("/entregas");
+  revalidatePath("/reportes");
+  revalidatePath("/reportes/rentabilidad-lote");
+  revalidatePath("/reportes/rentabilidad-producto");
+  revalidatePath("/reportes/utilidad-vendedor");
+  revalidatePath("/reportes/utilidad-inversionista");
+  return { success: true };
+}
+
+// ─── Editar pedido COMPLETADO ─────────────────────────────────
+export async function editarPedidoCompletado(
+  pedidoId: string,
+  data: {
+    cliente_id?: string | null;
+    vendedor_id: string;
+    sucursal_id?: string | null;
+    canal_id?: string | null;
+    tipo_entrega_id?: string | null;
+    lugar_entrega?: string | null;
+    lugar_envio?: string | null;
+    notas?: string | null;
+    items: { variante_id: string; cantidad: number; precio_unitario: number }[];
+  }
+) {
+  try {
+    await requireAuth();
+  } catch (err: any) {
+    return { error: err.message || "No autenticado" };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("editar_pedido_completado" as any, {
+    p_pedido_id: pedidoId,
+    p_cliente_id: data.cliente_id ?? null,
+    p_vendedor_id: data.vendedor_id,
+    p_sucursal_id: data.sucursal_id ?? null,
+    p_canal_id: data.canal_id ?? null,
+    p_tipo_entrega_id: data.tipo_entrega_id ?? null,
+    p_items: data.items,
+    p_lugar_entrega: data.lugar_entrega ?? null,
+    p_lugar_envio: data.lugar_envio ?? null,
+    p_notas: data.notas ?? null,
+  });
+  if (error) return { error: error.message };
+  revalidatePath(`/pedidos/${pedidoId}`);
+  revalidatePath("/pedidos");
+  revalidatePath("/dashboard");
+  revalidatePath("/clientes");
+  revalidatePath("/lotes");
+  revalidatePath("/inventario");
+  revalidatePath("/pagos");
+  revalidatePath("/entregas");
+  revalidatePath("/reportes");
+  revalidatePath("/reportes/rentabilidad-lote");
+  revalidatePath("/reportes/rentabilidad-producto");
+  revalidatePath("/reportes/utilidad-vendedor");
+  revalidatePath("/reportes/utilidad-inversionista");
+  return { success: true };
+}
+
 // ─── Editar pedido ────────────────────────────────────────────
 export async function editarPedido(
   pedidoId: string,

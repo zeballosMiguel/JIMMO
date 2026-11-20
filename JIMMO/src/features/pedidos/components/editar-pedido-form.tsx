@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { editarPedido } from "@/features/pedidos/actions";
+import { editarPedido, editarPedidoCompletado } from "@/features/pedidos/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -75,6 +75,7 @@ interface EditarPedidoFormProps {
   variantes: VariantOption[];
   productos?: ProductoOption[];
   categorias?: CategoriaOption[];
+  esCompletado?: boolean;
 }
 
 export function EditarPedidoForm({
@@ -88,6 +89,7 @@ export function EditarPedidoForm({
   variantes,
   productos = [],
   categorias = [],
+  esCompletado = false,
 }: EditarPedidoFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -264,23 +266,42 @@ export function EditarPedidoForm({
     }
 
     startTransition(async () => {
-      const res = await editarPedido(pedido.id, {
-        cliente_id: clienteId || null,
-        vendedor_id: vendedorId,
-        sucursal_id: sucursalId || null,
-        canal_id: canalId || null,
-        tipo_entrega_id: tipoEntregaId || null,
-        lugar_entrega: lugarEntrega || null,
-        lugar_envio: lugarEnvio || null,
-        notas: notas || null,
-        nuevo_estado: "RESERVADO",
-        items: validItems,
-      });
+      let res;
+      if (esCompletado) {
+        res = await editarPedidoCompletado(pedido.id, {
+          cliente_id: clienteId || null,
+          vendedor_id: vendedorId,
+          sucursal_id: sucursalId || null,
+          canal_id: canalId || null,
+          tipo_entrega_id: tipoEntregaId || null,
+          lugar_entrega: lugarEntrega || null,
+          lugar_envio: lugarEnvio || null,
+          notas: notas || null,
+          items: validItems,
+        });
+      } else {
+        res = await editarPedido(pedido.id, {
+          cliente_id: clienteId || null,
+          vendedor_id: vendedorId,
+          sucursal_id: sucursalId || null,
+          canal_id: canalId || null,
+          tipo_entrega_id: tipoEntregaId || null,
+          lugar_entrega: lugarEntrega || null,
+          lugar_envio: lugarEnvio || null,
+          notas: notas || null,
+          nuevo_estado: "RESERVADO",
+          items: validItems,
+        });
+      }
 
       if (res?.error) {
         toast.error(res.error);
       } else {
-        toast.success(`Pedido #${pedido.numero} actualizado exitosamente (Stock reajustado)`);
+        toast.success(
+          esCompletado
+            ? `Pedido #${pedido.numero} editado exitosamente. Stock, lotes y repartos recalculados.`
+            : `Pedido #${pedido.numero} actualizado exitosamente (Stock reajustado)`
+        );
         router.push(`/pedidos/${pedido.id}`);
         router.refresh();
       }
