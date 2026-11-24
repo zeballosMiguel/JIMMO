@@ -3,6 +3,12 @@ import { InventarioHub } from "@/features/inventario/components/inventario-hub";
 import { Boxes, Package, AlertTriangle, Layers } from "lucide-react";
 import { RefreshButton } from "@/components/ui/refresh-button";
 
+export type StockSucursalItem = {
+  variante_id: string;
+  sucursal_nombre: string;
+  stock_disponible_sucursal: number;
+};
+
 export const metadata = { title: "Inventario" };
 
 export default async function InventarioPage() {
@@ -15,6 +21,7 @@ export default async function InventarioPage() {
     { data: productos },
     { data: categorias },
     { data: detallesLote },
+    { data: stockSucursalRaw },
   ] = await Promise.all([
     supabase
       .from("productos")
@@ -30,6 +37,9 @@ export default async function InventarioPage() {
         "id, lote_id, variante_id, cantidad, cantidad_disponible, costo_unitario_bs, lotes(id, numero_lote, fecha_compra, fecha_recepcion, estado, proveedor), variantes_producto(id, producto_id, color, talla, sku)"
       )
       .order("created_at", { ascending: false }),
+    (supabase as any)
+      .from("vw_stock_sucursal")
+      .select("variante_id, sucursal_nombre, stock_disponible_sucursal"),
   ]);
 
   // Enriquecer categorías con conteo de productos
@@ -136,6 +146,7 @@ export default async function InventarioPage() {
         productos={(productos as any) || []}
         categorias={categoriasConCount}
         detallesLote={(detallesLote as any) || []}
+        stockSucursal={(stockSucursalRaw as any) || []}
       />
     </div>
   );

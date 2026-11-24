@@ -18,13 +18,20 @@ interface Categoria {
   _count?: number;
 }
 
+export interface StockSucursalItem {
+  variante_id: string;
+  sucursal_nombre: string;
+  stock_disponible_sucursal: number;
+}
+
 interface InventarioHubProps {
   productos: ProductoInventario[];
   categorias: Categoria[];
   detallesLote: DetalleLoteItem[];
+  stockSucursal?: StockSucursalItem[];
 }
 
-export function InventarioHub({ productos, categorias, detallesLote }: InventarioHubProps) {
+export function InventarioHub({ productos, categorias, detallesLote, stockSucursal = [] }: InventarioHubProps) {
   const [search, setSearch] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState<string | null>(null);
   const [filtroBajo, setFiltroBajo] = useState(false);
@@ -208,6 +215,7 @@ export function InventarioHub({ productos, categorias, detallesLote }: Inventari
               key={prod.id}
               producto={prod}
               detallesLote={detallesLote}
+              stockSucursal={stockSucursal}
               onVer={handleVerDetalle}
             />
           ))}

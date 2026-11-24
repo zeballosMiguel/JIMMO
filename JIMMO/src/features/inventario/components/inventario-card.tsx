@@ -2,14 +2,16 @@
 
 import { Eye } from "lucide-react";
 import type { ProductoInventario, DetalleLoteItem } from "./inventario-detalle-sheet";
+import type { StockSucursalItem } from "./inventario-hub";
 
 interface InventarioCardProps {
   producto: ProductoInventario;
   detallesLote?: DetalleLoteItem[];
+  stockSucursal?: StockSucursalItem[];
   onVer: (producto: ProductoInventario) => void;
 }
 
-export function InventarioCard({ producto, onVer }: InventarioCardProps) {
+export function InventarioCard({ producto, stockSucursal = [], onVer }: InventarioCardProps) {
   const totalStock = producto.variantes_producto.reduce(
     (acc, v) => acc + (v.stock_actual || 0),
     0
@@ -37,6 +39,16 @@ export function InventarioCard({ producto, onVer }: InventarioCardProps) {
     }
     return `Talla ${clean}`;
   }
+
+  // Obtener stock por sucursal para una variante
+  function getStockSucursal(varianteId: string) {
+    const rows = stockSucursal.filter((s) => s.variante_id === varianteId);
+    const ea = rows.find((s) => s.sucursal_nombre.toLowerCase().includes("alto"))?.stock_disponible_sucursal ?? null;
+    const lp = rows.find((s) => s.sucursal_nombre.toLowerCase().includes("paz"))?.stock_disponible_sucursal ?? null;
+    return { ea, lp };
+  }
+
+  const hayDatosSucursal = stockSucursal.length > 0;
 
   return (
     <div
@@ -80,7 +92,7 @@ export function InventarioCard({ producto, onVer }: InventarioCardProps) {
           {producto.categorias?.nombre || producto.descripcion || "Sin categoría"}
         </p>
 
-        {/* Encabezado: DESGLOSE POR VARIANTE (igual a la imagen) */}
+        {/* Encabezado: DESGLOSE POR VARIANTE */}
         <div className="mt-3.5 mb-1.5 border-t border-border/40 pt-2.5 flex items-center justify-between">
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
             DESGLOSE POR VARIANTE
@@ -91,7 +103,7 @@ export function InventarioCard({ producto, onVer }: InventarioCardProps) {
         </div>
       </div>
 
-      {/* ── Desglose de Variantes (Filas horizontales igual a la imagen) ── */}
+      {/* ── Desglose de Variantes ── */}
       <div
         className="flex-1 overflow-y-auto pr-1 min-h-0 divide-y divide-border/20"
         style={{
@@ -106,25 +118,44 @@ export function InventarioCard({ producto, onVer }: InventarioCardProps) {
         ) : (
           producto.variantes_producto.map((v) => {
             const isZero = v.stock_actual <= 0;
+            const { ea, lp } = getStockSucursal(v.id);
+            const hasSucursalData = hayDatosSucursal && (ea !== null || lp !== null);
 
             return (
               <div
                 key={v.id}
-                className="flex items-center justify-between py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                className="flex items-center justify-between py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors gap-2"
               >
-                {/* Nombre de la variante: Color / Talla (como en la imagen) */}
-                <span className="truncate pr-2 font-normal capitalize">
+                {/* Nombre de la variante */}
+                <span className="truncate font-normal capitalize min-w-0">
                   {v.color} / {formatTalla(v.talla)}
                 </span>
 
-                {/* Cantidad: X unids (en rojo si está en 0) */}
-                <span
-                  className={`tabular-nums text-xs font-bold shrink-0 ${
-                    isZero ? "text-destructive font-bold" : "text-foreground"
-                  }`}
-                >
-                  {v.stock_actual} unids
-                </span>
+                {/* Badges de sucursal o total */}
+                <div className="flex items-center gap-1 shrink-0">
+                  {hasSucursalData ? (
+                    <>
+                      {ea !== null && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                          🏠{ea}
+                        </span>
+                      )}
+                      {lp !== null && lp > 0 && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300 border border-violet-200 dark:border-violet-700">
+                          📍{lp}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <span
+                      className={`tabular-nums text-xs font-bold ${
+                        isZero ? "text-destructive" : "text-foreground"
+                      }`}
+                    >
+                      {v.stock_actual} unids
+                    </span>
+                  )}
+                </div>
               </div>
             );
           })

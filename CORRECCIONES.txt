@@ -1,0 +1,97 @@
+ERROES O MEJORA OBSERVADAS.
+-+eliminar venta, que eso haga aumentar en el sotck
+-+diseño, mejorar colores, tipografia. Y formato. para el vendedor. 
+-+que se creee un excel por cada tabla
+-+Hacer que la barra de navegacion desaparezca
+-+sea responsivo. 
+-+boton de tienda fisica
+-+mostrar errores con lenguaje comun 
+-+error al completar/reservar pedido
+-+error al mostrar codigo
+-+boton eliminar eidtar, elimar todo.
+-+error en lotes
+-agregar fecha?
+-?si el cliente ha pagado, o efectuado un pago, que se marca como completado. 
+-+actualizar estado de pedido en tabla de entregas
+-corregir excel
+-+hacer pestaña retiros
+-+hacer pestaña dashboar o utilidades. 
+-+lotes, pones en recibido de acuerdo a la facha automaticamente. 
+-+quitar del dashboard cliente y variante.  
+-+al momento de hacer pedido, poner buscador para el producto. 
+-+ver cómo mejorar la confirmacion del pedido
+-+mejorar el llenado de lotes, catalogo. 
+--si marco completo en un pedido reservado, es porque ha pagado el total 
++-cambiar diseño de editar pedido en estado de reserva
+-+en la pestaña clientes, al momento de ver, no me sale su historial de pedidos.
+-+arreglar desfase en la pestaña nuevo pedidos. visualmente
+--en nuevo pedido, que al agregar una prenda, el limite sea el dispoible en stock
+-+en nuevo pedido que se quite 190 y modificar y quitar descripcion
+-+editar tabla entregas.
+-+mejorar/editar tabla de lote. Pedir el precio en dolar. Y qué haga mas calculos. agregar inversionista por ejemplo
+-agregar en el dahsboar las metricas por vendedor e inversionista
+-+editar pestaña lotes
+-editar edicion de producto, para añadir variante sea igual al de crear
+-+eidtar edicion de pedido, cuando esta en reserva. 
+-+que el usuario solo pueda ver sus ventas, a excepcion del admin
+PROXIMAMENTE
+-+filtros de busqueda de pedidos
+-+boton de actualizar inventarios, pedidos. 
++agregar total sumado de pagos
+-+mejorar visualmente el formato
+ -+que los codgios se generen automaticamente, el sku
+-+editar pedido se actualice de diseño	
+
+
+Cambios especificos
+lotes: -+
+--al agregar producto, que me salga la misma ficha que en catalogo/nuevo producto. 
+-+al agregar nuevo lote, que el costo extra por cada una, me la pida una vez, y divida en la cantidad de productos. 
+-+que me diga el flujo, comprar, recibir, desglosar, y etc. 
+-+quitar, la 2da pestaña catalogo/agregar prendas 
+-+que en registrar nueva compra/pedido, el costo extra se divida en partes iguales, de acuerdo a la cantidad de productos. (cambiar de "flete" por costoExtra o algo asi)	
+-+Al momento de hacer el conteo, en la tabla contar pedido, lado derecho, donde agrego variante / color talla, que me de la opcion de borrar una variante, en caso de error. Y en el lado izquierdo, que no me salga la opcion de "incluir otro producto"
+-+en la tabla contar pedido, al momento de guardar BOrrador, ese boton que no añada al inventario, solo guarda ahi momentaneamente, si acaso tengo que ir a otra pestaña, todo mi conteo no se pierda. 
+-+al apretar finalizar, en conteo, que me pregunte o me muestre un resumen o solo confirme mi compra. Pues ya no habran cambios, o si? y pues se pondra y actualizara el inventario. 
+-+si ya he finalizado conteo, que me muestre los pedidos que ya he realizado, en esa misma tabla, contar pedido, por variante.Y que se actualice el estado, pues a pesar de terminar de contar, sigue en "por contar" y no estan o esta vacio, no estan las variantes o colores que ya he contado. Esto en la tabla de contar pedido. ahi quiero que me salgan la variantes, una vez finalizado el conteo.
+-+ Y el costo unitario, cambie en funcion a la cantidad contada, por ejemplo, si pedi 100 de un producto, pero me llegó mas o menos, que se base en lo que me llegó. Y despues de haber finalizado, que no haya el boton guardar borrador.
+-+ en la tabla contar pedido, cuando añado una varite, pero no pongo talla, que se ponga automaticamente en UNICA
+-+dialogo emergente o modal de confimacion, que me muestre mas detalle, esta bien como se encuentra ahora mismo, en diseño pero, tipo ticket de compra. y que su mensaje de advertencia seas corto, tipo una vez confirmado, se agrega al inventario sin cambios posteriores, algo asi.  	
+-+en contar pedido, en esa tabla, me muestra costo unit, pero creo que hay un ligero error. Ese costo se determina: (costo pedido+costos extras)/cantidad de prendas contada.
+-+mostrar Header de detalles del lote solo numero de produtcos. ejem: 2 produtos
+--cuando el pedido esta en el flujo: registrar recepcion, antes insertar a stock. hay una boton,editar, pero que no me deje cambiar el costo de la compra
+-+Despues de haber finalizado el conteo, en la pantalla de detalles, me parece bien el flujo, luego las cards, pero la tabla de desglose fisico de prentas,esa tabla cambiar mostrandome el producto, NO las variantes. En esa tabla, quitar sku y poner en su lugar codigo interno. 
+-+boton editar se desborda o se desorneda cuando en nota se agrega full texto. 	que solo cambie nombre, tipo de cambio(y TOODS los calculos que corresponde) o ya no editar. 
+-+añadir un buscador en lotes. 
+ ++en la tabla desglose fisico, el costo extra esta calculando mal, aun si lo edito. deberia distribuir por la cantidad de productos. 
+--en nuevo lote, en producots, añadir buscardor para producto
+-el lotes, al añadir, la fecha de compra, que sea el de hoy. 
+-cuadno un lote esta en estado para contar, añadir opcion de agregar producto
+
+REPORTES: -
+-+revisar calculos. 
+-+UTILIDAD por vendedor de acuerdo a las ventas de cada venta que hacen. 
+
+PEDIDOS: -
+-+quital el filtro de cancelado. 
+-+en nuevo pedido, cuadno me sale resumen de venta, que quite el precio por prederminado que sale. Y tambien la ganancia FIFO. 
+--en detalle de pedido, si el pedido no contaba con entrega externa, o sea en tienda, que no me slaga la tablita Tickets de entrega/despacho. 
+
+CLIENTE
+-+en nuevo cliente, que el formulario no me pida, ni email, ni direccion. Y en la tabla, que no me muestre estado, sino cantidad de pedidos. 
+-+en eidtar o ver cliente, actualizar esos datos
+
+PAGOS
+-+EN LA tabla, que no me muestre referencia. 
+
+Entregas
+-+que no me salga costo delivery, pues no hay eso. 
+-+que los estados sean 3 nada mas. y eso, dos. Pendiente (que todavia no se dejó), entregado, que ya se dejó.
+
+COnfiguracion
++en nuevo vendedor, del formario quita porcentaje de comision, no se usa. Y por ende, 	de la tabla tambien. 		
+--a muchos usuarios, haacer que no se sature esa vista. 
+--eliminar de vista, al vendedor eliminado. 
+
+CATALOGO
+-al momenot de añadir un produto al lote nuevo, y esta en pendiente, automaticametne se añade al catologo un color estandar en el catalogo, lo mismo en invetario. 

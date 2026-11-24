@@ -18,6 +18,7 @@ import {
   Store,
   PanelLeftClose,
   PanelLeftOpen,
+  ArrowRightLeft,
 } from "lucide-react";
 import type { Perfil } from "@/lib/auth/session";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,7 @@ const navItems = [
   { label: "Clientes", href: "/clientes", icon: Users, roles: ["admin", "vendedor"] },
   { label: "Catálogos", href: "/catalogos", icon: Store, roles: ["admin"] },
   { label: "Inventario", href: "/inventario", icon: Boxes, roles: ["admin", "vendedor"] },
+  { label: "Traspasos", href: "/traspasos", icon: ArrowRightLeft, roles: ["admin"] },
   { label: "Lotes", href: "/lotes", icon: Package, roles: ["admin"] },
   { label: "Pagos", href: "/pagos", icon: CreditCard, roles: ["admin"] },
   { label: "Retiros", href: "/retiros", icon: Wallet, roles: ["admin"] },
