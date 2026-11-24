@@ -5,7 +5,7 @@ import { realizarTraspaso } from "@/features/traspasos/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ArrowRightLeft, Package, AlertCircle } from "lucide-react";
+import { ArrowRightLeft, Package, AlertCircle, Search, X } from "lucide-react";
 
 export interface SucursalOption {
   id: string;
@@ -54,6 +54,7 @@ export function TraspasoForm({
   const [destinoId, setDestinoId] = useState(laPazId);
   const [cantidades, setCantidades] = useState<Record<string, string>>({});
   const [motivo, setMotivo] = useState("");
+  const [search, setSearch] = useState("");
 
   const origenNombre = sucursales.find((s) => s.id === origenId)?.nombre ?? "Origen";
   const destinoNombre = sucursales.find((s) => s.id === destinoId)?.nombre ?? "Destino";
@@ -68,6 +69,18 @@ export function TraspasoForm({
       ),
     [variantes, isOrigenEA]
   );
+
+  const filteredVariantes = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return variantesConStock;
+    return variantesConStock.filter(
+      (v) =>
+        v.nombre_producto.toLowerCase().includes(q) ||
+        v.sku.toLowerCase().includes(q) ||
+        v.color.toLowerCase().includes(q) ||
+        (v.talla && v.talla.toLowerCase().includes(q))
+    );
+  }, [variantesConStock, search]);
 
   function getStockOrigen(v: VarianteStockItem) {
     return isOrigenEA ? v.stock_ea : v.stock_lp;
@@ -224,7 +237,7 @@ export function TraspasoForm({
 
       {/* ── Tabla de Variantes ── */}
       <div className="bg-card border border-border rounded-2xl shadow-2xs overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-border bg-muted/20 flex items-center justify-between">
+        <div className="px-5 py-3.5 border-b border-border bg-muted/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-sm font-bold text-foreground">
               Variantes Disponibles en{" "}
@@ -234,11 +247,32 @@ export function TraspasoForm({
               Ingresa la cantidad a enviar a {destinoNombre}
             </p>
           </div>
-          {totalUnidades > 0 && (
-            <span className="text-xs font-bold bg-primary/10 text-primary border border-primary/20 px-2.5 py-1 rounded-full">
-              {totalUnidades} uds a traspasar
-            </span>
-          )}
+          <div className="flex items-center gap-2.5">
+            {totalUnidades > 0 && (
+              <span className="text-xs font-bold bg-primary/10 text-primary border border-primary/20 px-2.5 py-1 rounded-full shrink-0">
+                {totalUnidades} uds a traspasar
+              </span>
+            )}
+            <div className="relative w-full sm:w-64">
+              <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar producto, SKU, color..."
+                className="pl-8 pr-8 h-8 text-xs bg-background"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label="Limpiar búsqueda"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
         {variantesConStock.length === 0 ? (
@@ -247,6 +281,14 @@ export function TraspasoForm({
             <p className="text-sm font-semibold text-foreground">Sin stock disponible en {origenNombre}</p>
             <p className="text-xs text-muted-foreground mt-1">
               Cambia la sucursal de origen o realiza un traspaso en sentido inverso.
+            </p>
+          </div>
+        ) : filteredVariantes.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center px-6">
+            <Search className="w-8 h-8 text-muted-foreground/30 mb-2" />
+            <p className="text-sm font-semibold text-foreground">No se encontraron productos</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              No hay variantes que coincidan con "{search}".
             </p>
           </div>
         ) : (
@@ -261,7 +303,7 @@ export function TraspasoForm({
             </div>
 
             <div className="divide-y divide-border/60">
-              {variantesConStock.map((v) => {
+              {filteredVariantes.map((v) => {
                 const stockOrigen = getStockOrigen(v);
                 const stockDestino = isOrigenEA ? v.stock_lp : v.stock_ea;
                 const cantVal = parseInt(cantidades[v.variante_id] || "0", 10) || 0;
