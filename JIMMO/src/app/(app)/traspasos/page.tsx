@@ -29,12 +29,7 @@ export default async function TraspasosPage() {
       .order("sku"),
     (supabase as any)
       .from("traspasos_stock")
-      .select(`
-        id, cantidad, motivo, created_at,
-        origen: origen_sucursal_id ( nombre ),
-        destino: destino_sucursal_id ( nombre ),
-        variante: variante_id ( sku, color, productos ( nombre ) )
-      `)
+      .select("id, origen_sucursal_id, destino_sucursal_id, variante_id, cantidad, motivo, created_at")
       .order("created_at", { ascending: false })
       .limit(20),
   ]);
@@ -77,18 +72,32 @@ export default async function TraspasosPage() {
     })
     .filter((v: VarianteStockItem) => v.stock_ea > 0 || v.stock_lp > 0);
 
-  // Construir historial
-  const historial: TraspasoHistorialItem[] = (historialRaw || []).map((h: any) => ({
-    id: h.id,
-    origen_sucursal_nombre: h.origen?.nombre ?? "—",
-    destino_sucursal_nombre: h.destino?.nombre ?? "—",
-    nombre_producto: h.variante?.productos?.nombre ?? null,
-    variante_sku: h.variante?.sku ?? "—",
-    variante_color: h.variante?.color ?? "—",
-    cantidad: h.cantidad,
-    motivo: h.motivo ?? null,
-    created_at: h.created_at,
-  }));
+  // Construir historial resolviendo nombres desde sucursales y variantes ya cargadas
+  const sucursalMap = new Map<string, string>(sucursales.map((s) => [s.id, s.nombre]));
+  const varianteMap = new Map<string, { sku: string; color: string; nombre_producto: string }>();
+  for (const v of (variantesRaw || []) as any[]) {
+    const prod = Array.isArray(v.productos) ? v.productos[0] : v.productos;
+    varianteMap.set(v.id, {
+      sku: v.sku ?? "—",
+      color: v.color ?? "—",
+      nombre_producto: prod?.nombre ?? "Producto",
+    });
+  }
+
+  const historial: TraspasoHistorialItem[] = (historialRaw || []).map((h: any) => {
+    const vInfo = varianteMap.get(h.variante_id);
+    return {
+      id: h.id,
+      origen_sucursal_nombre: sucursalMap.get(h.origen_sucursal_id) ?? "—",
+      destino_sucursal_nombre: sucursalMap.get(h.destino_sucursal_id) ?? "—",
+      nombre_producto: vInfo?.nombre_producto ?? null,
+      variante_sku: vInfo?.sku ?? "—",
+      variante_color: vInfo?.color ?? "—",
+      cantidad: h.cantidad,
+      motivo: h.motivo ?? null,
+      created_at: h.created_at,
+    };
+  });
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">

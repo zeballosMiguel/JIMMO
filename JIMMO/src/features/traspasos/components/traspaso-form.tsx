@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { realizarTraspaso } from "@/features/traspasos/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +50,7 @@ export function TraspasoForm({
   elAltoId,
   laPazId,
 }: TraspasoFormProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [origenId, setOrigenId] = useState(elAltoId);
   const [destinoId, setDestinoId] = useState(laPazId);
@@ -136,6 +138,7 @@ export function TraspasoForm({
         toast.success(`Traspaso realizado: ${items.length} variante(s) enviadas a ${destinoNombre}`);
         setCantidades({});
         setMotivo("");
+        router.refresh();
       }
     });
   }
