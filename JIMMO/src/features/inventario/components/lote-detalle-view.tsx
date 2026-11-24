@@ -46,6 +46,7 @@ interface Props {
   productos: any[];
   categorias: any[];
   inversionistas: any[];
+  sucursales?: { id: string; nombre: string }[];
   initialTab?: string;
   initialAction?: string;
 }
@@ -160,6 +161,7 @@ export function LoteDetalleView({
   productos,
   categorias,
   inversionistas,
+  sucursales = [],
   initialAction,
 }: Props) {
   const isEditable =
@@ -803,6 +805,7 @@ export function LoteDetalleView({
           catalogoVariantes={variantes}
           variantesProducto={variantesBulto}
           detallesActuales={detalles}
+          sucursales={sucursales}
           soloDesglose={soloDesglose}
           onCountChange={handleCountChange}
           onClose={!isEditable ? () => setShowWorkstation(false) : undefined}

@@ -78,6 +78,12 @@ export interface SelectOption {
   ciudad?: string | null;
 }
 
+export interface StockSucursalRow {
+  variante_id: string;
+  sucursal_nombre: string;
+  stock_disponible_sucursal: number;
+}
+
 export interface NuevoPedidoFormProps {
   clientes: ClienteOption[];
   vendedores: SelectOption[];
@@ -87,6 +93,7 @@ export interface NuevoPedidoFormProps {
   variantes: VariantOption[];
   productos?: ProductoOption[];
   categorias?: CategoriaOption[];
+  stockSucursal?: StockSucursalRow[];
   currentVendedorId?: string;
   isAdmin?: boolean;
 }
@@ -111,6 +118,7 @@ export function NuevoPedidoForm({
   variantes,
   productos = [],
   categorias = [],
+  stockSucursal = [],
   currentVendedorId,
   isAdmin = false,
 }: NuevoPedidoFormProps) {
@@ -870,29 +878,52 @@ export function NuevoPedidoForm({
                           {prod.variantes.map((v) => {
                             const cartItem = items.find((it) => it.variante_id === v.id);
                             const isOutOfStock = v.stock_disponible <= 0;
+                            const sucRows = stockSucursal.filter((s) => s.variante_id === v.id);
+                            const hasSuc = sucRows.length > 0;
+                            const eaStock = hasSuc
+                              ? Number(sucRows.find((s) => s.sucursal_nombre.toLowerCase().includes("alto"))?.stock_disponible_sucursal ?? 0)
+                              : 0;
+                            const lpStock = hasSuc
+                              ? Number(sucRows.find((s) => s.sucursal_nombre.toLowerCase().includes("paz"))?.stock_disponible_sucursal ?? 0)
+                              : 0;
+                            const onlyInEA = hasSuc && lpStock === 0 && eaStock > 0;
+
                             return (
                               <button
                                 key={v.id}
                                 type="button"
                                 disabled={isOutOfStock}
                                 onClick={() => handleAddVariant(v)}
-                                title={`${v.color || "Color"} / ${v.talla || "U"} (Disponibles: ${v.stock_disponible})`}
-                                className={`text-left p-1.5 rounded-lg border transition-all flex items-center justify-between gap-1 ${isOutOfStock
+                                title={
+                                  hasSuc
+                                    ? `${v.color || "Color"} / ${v.talla || "U"} — El Alto: ${eaStock} | La Paz: ${lpStock}`
+                                    : `${v.color || "Color"} / ${v.talla || "U"} (Disponibles: ${v.stock_disponible})`
+                                }
+                                className={`text-left p-1.5 rounded-lg border transition-all flex flex-col gap-0.5 ${isOutOfStock
                                   ? "opacity-40 cursor-not-allowed border-border/40 bg-muted/20 text-muted-foreground"
                                   : cartItem
                                     ? "border-zinc-950 bg-zinc-950 text-white shadow-xs font-semibold"
-                                    : "border-border hover:border-zinc-400 bg-background text-foreground hover:bg-muted/40"
+                                    : onlyInEA
+                                      ? "border-amber-300/80 bg-amber-50/40 dark:bg-amber-950/20 hover:border-amber-400 text-foreground"
+                                      : "border-border hover:border-zinc-400 bg-background text-foreground hover:bg-muted/40"
                                   }`}
                               >
-                                <span className="truncate text-[10px] leading-tight font-medium">
-                                  {v.color || "Color"} / {v.talla || "U"}
-                                </span>
-                                <span
-                                  className={`text-[9px] font-mono shrink-0 tracking-tight ${cartItem ? "text-zinc-300 font-bold" : "text-muted-foreground"
-                                    }`}
-                                >
-                                  {cartItem ? `x${cartItem.cantidad}` : `(${v.stock_disponible})`}
-                                </span>
+                                <div className="flex items-center justify-between gap-1 w-full">
+                                  <span className="truncate text-[10px] leading-tight font-medium">
+                                    {v.color || "Color"} / {v.talla || "U"}
+                                  </span>
+                                  <span
+                                    className={`text-[9px] font-mono shrink-0 tracking-tight ${cartItem ? "text-zinc-300 font-bold" : "text-muted-foreground"
+                                      }`}
+                                  >
+                                    {cartItem ? `x${cartItem.cantidad}` : `(${v.stock_disponible})`}
+                                  </span>
+                                </div>
+                                {hasSuc && !isOutOfStock && (
+                                  <div className={`text-[9px] font-mono leading-none ${cartItem ? "text-zinc-300" : "text-muted-foreground"}`}>
+                                    🏠{eaStock} · 📍{lpStock}
+                                  </div>
+                                )}
                               </button>
                             );
                           })}

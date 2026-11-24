@@ -340,34 +340,65 @@ export function TraspasoForm({
         )}
       </div>
 
-      {/* ── Historial ── */}
-      {historial.length > 0 && (
-        <div className="bg-card border border-border rounded-2xl shadow-2xs overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-border bg-muted/20">
-            <h2 className="text-sm font-bold text-foreground">Historial de Traspasos</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Últimos 20 movimientos entre sucursales</p>
+      {/* ── Historial / Órdenes de Envío ── */}
+      <div className="bg-card border border-border rounded-2xl shadow-2xs overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-border bg-muted/20 flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-bold text-foreground">Órdenes de Envío / Historial de Traspasos</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Últimos 20 envíos registrados entre sucursales</p>
           </div>
-          <div className="divide-y divide-border/60">
-            {historial.map((h) => (
-              <div key={h.id} className="px-5 py-3 flex items-center gap-3 text-xs">
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-foreground truncate">
-                    {h.nombre_producto ?? h.variante_sku} · {h.variante_color}
-                  </p>
-                  <p className="text-muted-foreground">
-                    {h.origen_sucursal_nombre} → {h.destino_sucursal_nombre}
-                    {h.motivo && <span className="ml-1 italic">· {h.motivo}</span>}
-                  </p>
-                </div>
-                <div className="shrink-0 text-right">
-                  <p className="font-bold text-foreground">{h.cantidad} uds</p>
-                  <p className="text-muted-foreground/70">{formatDate(h.created_at)}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+          <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+            {historial.length} mov.
+          </span>
         </div>
-      )}
+        {historial.length === 0 ? (
+          <div className="py-10 text-center text-xs text-muted-foreground">
+            Aún no se han registrado órdenes de traspaso entre sucursales.
+          </div>
+        ) : (
+          <div className="divide-y divide-border/60">
+            {historial.map((h) => {
+              const isFromEA = h.origen_sucursal_nombre.toLowerCase().includes("alto");
+              const isToLP = h.destino_sucursal_nombre.toLowerCase().includes("paz");
+              return (
+                <div key={h.id} className="px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs hover:bg-muted/20 transition-colors">
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-foreground truncate">
+                        {h.nombre_producto ?? h.variante_sku}
+                      </span>
+                      <span className="text-muted-foreground capitalize">
+                        · {h.variante_color}
+                      </span>
+                      <span className="font-mono text-[10px] bg-muted px-1.5 py-0.5 rounded border border-border/50 text-muted-foreground">
+                        {h.variante_sku}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap text-[11px]">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium">
+                        {isFromEA ? "🏠" : "📍"} {h.origen_sucursal_nombre}
+                      </span>
+                      <span className="text-muted-foreground font-bold">→</span>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-violet-50 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 font-medium">
+                        {isToLP ? "📍" : "🏠"} {h.destino_sucursal_nombre}
+                      </span>
+                      {h.motivo && (
+                        <span className="text-muted-foreground italic ml-1">· "{h.motivo}"</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="shrink-0 sm:text-right flex sm:flex-col items-center sm:items-end justify-between gap-1">
+                    <span className="inline-flex items-center font-bold text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                      {h.cantidad} uds
+                    </span>
+                    <p className="text-[11px] text-muted-foreground/80">{formatDate(h.created_at)}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -82,8 +82,10 @@ interface Props {
   detallesActuales: {
     id?: string;
     variante_id: string;
+    sucursal_id?: string | null;
     cantidad: number;
   }[];
+  sucursales?: { id: string; nombre: string }[];
   soloDesglose?: boolean;
   onClose?: () => void;
   onCountChange?: (count: number) => void;
@@ -156,12 +158,23 @@ export function LoteContarWorkstation({
   catalogoVariantes = [],
   variantesProducto: initialVariantes = [],
   detallesActuales = [],
+  sucursales = [],
   soloDesglose = false,
   onClose,
   onCountChange,
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+
+  const elAltoId = useMemo(
+    () => sucursales.find((s) => s.nombre.toLowerCase().includes("alto"))?.id ?? sucursales[0]?.id ?? "",
+    [sucursales]
+  );
+  const laPazId = useMemo(
+    () => sucursales.find((s) => s.nombre.toLowerCase().includes("paz"))?.id ?? sucursales[1]?.id ?? "",
+    [sucursales]
+  );
+  const hasSucursales = Boolean(elAltoId && laPazId);
 
   // Lista local de productos asociados a este lote
   const [localProductos, setLocalProductos] = useState<ProductoLoteInfo[]>(productosLote);
@@ -176,16 +189,29 @@ export function LoteContarWorkstation({
     initialVariantes.filter((v) => !isEstandar(v.color, v.talla))
   );
 
-  // Mapa de conteo de unidades físicas por varianteId: { [varianteId]: cantidad }
-  const [conteos, setConteos] = useState<Record<string, number>>(() => {
-    const initial: Record<string, number> = {};
+  // Mapa de conteo por sucursal: { [varianteId]: { ea, lp } }
+  const [conteosSucursal, setConteosSucursal] = useState<Record<string, { ea: number; lp: number }>>(() => {
+    const initial: Record<string, { ea: number; lp: number }> = {};
     (detallesActuales || []).forEach((d) => {
-      if (d.variante_id) {
-        initial[d.variante_id] = d.cantidad || 0;
+      if (!d.variante_id) return;
+      if (!initial[d.variante_id]) initial[d.variante_id] = { ea: 0, lp: 0 };
+      if (laPazId && d.sucursal_id === laPazId) {
+        initial[d.variante_id].lp += d.cantidad || 0;
+      } else {
+        initial[d.variante_id].ea += d.cantidad || 0;
       }
     });
     return initial;
   });
+
+  // Total derivado por variante para compatibilidad con métricas existentes
+  const conteos = useMemo(() => {
+    const res: Record<string, number> = {};
+    for (const [vid, val] of Object.entries(conteosSucursal)) {
+      res[vid] = (val.ea || 0) + (val.lp || 0);
+    }
+    return res;
+  }, [conteosSucursal]);
 
   // Catálogo completo de variantes disponibles para el modal (combina catálogo global + del lote + creadas en caliente)
   const todasLasVariantesCatalogo = useMemo(() => {
@@ -243,12 +269,13 @@ export function LoteContarWorkstation({
       return Array.from(map.values());
     });
 
-    // 2. Incrementar / asignar los conteos
-    setConteos((prev) => {
+    // 2. Incrementar / asignar los conteos (por defecto a El Alto)
+    setConteosSucursal((prev) => {
       const next = { ...prev };
       for (const item of items) {
         if (item.variante.id) {
-          next[item.variante.id] = (next[item.variante.id] || 0) + item.cantidad;
+          const cur = next[item.variante.id] || { ea: 0, lp: 0 };
+          next[item.variante.id] = { ea: cur.ea + item.cantidad, lp: cur.lp };
         }
       }
       return next;
@@ -259,7 +286,7 @@ export function LoteContarWorkstation({
   function handleEliminarVariante(varianteId: string) {
     if (isFinalizado) return;
     setLocalVariantes((prev) => prev.filter((v) => v.id !== varianteId));
-    setConteos((prev) => {
+    setConteosSucursal((prev) => {
       const next = { ...prev };
       delete next[varianteId];
       return next;
@@ -308,17 +335,28 @@ export function LoteContarWorkstation({
 
   useEffect(() => {
     if (detallesActuales && detallesActuales.length > 0) {
-      setConteos((prev) => {
+      setConteosSucursal((prev) => {
         const next = { ...prev };
+        const grouped: Record<string, { ea: number; lp: number }> = {};
         detallesActuales.forEach((d) => {
-          if (d.variante_id && (next[d.variante_id] === undefined || next[d.variante_id] === 0)) {
-            next[d.variante_id] = d.cantidad || 0;
+          if (!d.variante_id) return;
+          if (!grouped[d.variante_id]) grouped[d.variante_id] = { ea: 0, lp: 0 };
+          if (laPazId && d.sucursal_id === laPazId) {
+            grouped[d.variante_id].lp += d.cantidad || 0;
+          } else {
+            grouped[d.variante_id].ea += d.cantidad || 0;
           }
         });
+        for (const [vid, val] of Object.entries(grouped)) {
+          const cur = next[vid];
+          if (!cur || (cur.ea === 0 && cur.lp === 0)) {
+            next[vid] = val;
+          }
+        }
         return next;
       });
     }
-  }, [detallesActuales]);
+  }, [detallesActuales, laPazId]);
 
   // Asegurar que activeProdId apunte siempre a un producto válido
   useEffect(() => {
@@ -337,18 +375,34 @@ export function LoteContarWorkstation({
 
   // Modificar cantidad contada
   function handleSetCantidad(varianteId: string, cant: number) {
-    setConteos((prev) => ({
-      ...prev,
-      [varianteId]: Math.max(0, cant),
-    }));
+    setConteosSucursal((prev) => {
+      const cur = prev[varianteId] || { ea: 0, lp: 0 };
+      return {
+        ...prev,
+        [varianteId]: { ea: Math.max(0, cant), lp: cur.lp },
+      };
+    });
+  }
+
+  function handleSetCantidadSucursal(varianteId: string, sucursal: "ea" | "lp", cant: number) {
+    setConteosSucursal((prev) => {
+      const cur = prev[varianteId] || { ea: 0, lp: 0 };
+      return {
+        ...prev,
+        [varianteId]: {
+          ...cur,
+          [sucursal]: Math.max(0, cant),
+        },
+      };
+    });
   }
 
   function handleIncrementCantidad(varianteId: string, delta: number) {
-    setConteos((prev) => {
-      const current = prev[varianteId] || 0;
+    setConteosSucursal((prev) => {
+      const cur = prev[varianteId] || { ea: 0, lp: 0 };
       return {
         ...prev,
-        [varianteId]: Math.max(0, current + delta),
+        [varianteId]: { ea: Math.max(0, cur.ea + delta), lp: cur.lp },
       };
     });
   }
@@ -496,10 +550,13 @@ export function LoteContarWorkstation({
       });
 
       const cant = Math.max(1, parseInt(nuevaCantidad) || 1);
-      setConteos((prev) => ({
-        ...prev,
-        [created.id]: (prev[created.id] || 0) + cant,
-      }));
+      setConteosSucursal((prev) => {
+        const cur = prev[created.id] || { ea: 0, lp: 0 };
+        return {
+          ...prev,
+          [created.id]: { ea: cur.ea + cant, lp: cur.lp },
+        };
+      });
 
       setNuevoColor("");
       setNuevaTalla("");
@@ -531,12 +588,22 @@ export function LoteContarWorkstation({
       return;
     }
 
-    const items: DesgloseVarianteItem[] = Object.entries(conteos)
-      .filter(([_, cant]) => cant > 0)
-      .map(([varianteId, cant]) => ({
-        variante_id: varianteId,
-        cantidad: cant,
-      }));
+    const items: DesgloseVarianteItem[] = [];
+    for (const [varianteId, val] of Object.entries(conteosSucursal)) {
+      if (hasSucursales) {
+        if (val.ea > 0) {
+          items.push({ variante_id: varianteId, cantidad: val.ea, sucursal_id: elAltoId });
+        }
+        if (val.lp > 0) {
+          items.push({ variante_id: varianteId, cantidad: val.lp, sucursal_id: laPazId });
+        }
+      } else {
+        const total = (val.ea || 0) + (val.lp || 0);
+        if (total > 0) {
+          items.push({ variante_id: varianteId, cantidad: total });
+        }
+      }
+    }
 
     startTransition(async () => {
       if (!recibirEnInventario) {
@@ -936,6 +1003,7 @@ export function LoteContarWorkstation({
                   <div className="divide-y divide-border/60">
                     {activeStat.vars.map((v) => {
                       const cant = conteos[v.id] || 0;
+                      const valSuc = conteosSucursal[v.id] || { ea: 0, lp: 0 };
                       const skuDisplay = getVariantSku(v, activeStat.prod, catalogoProductos);
 
                       return (
@@ -968,12 +1036,75 @@ export function LoteContarWorkstation({
                             </span>
                           </div>
 
-                          {/* Cantidad Física con Stepper y Botones de Pack */}
+                          {/* Cantidad Física con Split por Sucursal o Stepper clásico */}
                           <div className="w-5/12 flex items-center justify-end gap-1.5 shrink-0">
                             {isFinalizado ? (
-                              <span className="font-mono font-black text-sm text-foreground bg-muted/60 px-3 py-1 rounded-lg border border-border">
-                                {cant} uds
-                              </span>
+                              hasSucursales ? (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
+                                    🏠 {valSuc.ea}
+                                  </span>
+                                  <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-violet-50 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300 border border-violet-200 dark:border-violet-700">
+                                    📍 {valSuc.lp}
+                                  </span>
+                                  <span className="font-mono font-black text-xs text-foreground bg-muted/60 px-2 py-0.5 rounded border border-border">
+                                    = {cant}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="font-mono font-black text-sm text-foreground bg-muted/60 px-3 py-1 rounded-lg border border-border">
+                                  {cant} uds
+                                </span>
+                              )
+                            ) : hasSucursales ? (
+                              <>
+                                {/* Split El Alto + La Paz */}
+                                <div className="flex items-center gap-1.5">
+                                  <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-900/50 border border-border rounded-lg px-1.5 py-0.5">
+                                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300" title="El Alto (Matriz)">
+                                      🏠 EA
+                                    </span>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      value={valSuc.ea === 0 ? "" : valSuc.ea}
+                                      placeholder="0"
+                                      onChange={(e) => handleSetCantidadSucursal(v.id, "ea", parseInt(e.target.value) || 0)}
+                                      disabled={isPending}
+                                      className="w-12 h-7 text-center font-bold text-xs px-1 bg-background border-0 shadow-none focus-visible:ring-1"
+                                    />
+                                  </div>
+
+                                  <div className="flex items-center gap-1 bg-violet-50/50 dark:bg-violet-950/30 border border-violet-200/80 dark:border-violet-800/60 rounded-lg px-1.5 py-0.5">
+                                    <span className="text-[10px] font-bold text-violet-700 dark:text-violet-300" title="La Paz (Sucursal)">
+                                      📍 LP
+                                    </span>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      value={valSuc.lp === 0 ? "" : valSuc.lp}
+                                      placeholder="0"
+                                      onChange={(e) => handleSetCantidadSucursal(v.id, "lp", parseInt(e.target.value) || 0)}
+                                      disabled={isPending}
+                                      className="w-12 h-7 text-center font-bold text-xs px-1 bg-background border-0 shadow-none focus-visible:ring-1"
+                                    />
+                                  </div>
+
+                                  <span className="font-mono text-[11px] font-bold text-muted-foreground w-10 text-right">
+                                    ={cant}
+                                  </span>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleEliminarVariante(v.id)}
+                                  disabled={isPending}
+                                  className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
+                                  title="Eliminar variante"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
                             ) : (
                               <>
                                 {/* Atajos rápidos +6 y +12 */}

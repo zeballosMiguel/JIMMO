@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   Sheet,
   SheetContent,
@@ -10,10 +11,14 @@ import {
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Package, Layers, Tag, ExternalLink, Calendar, Boxes, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Package, Layers, Tag, ExternalLink, Calendar, Boxes, ArrowRightLeft } from "lucide-react";
 import Link from "next/link";
 import { getColorHex } from "@/features/catalogos/components/producto-detalle-sheet";
+import { realizarTraspaso } from "@/features/traspasos/actions";
+import { toast } from "sonner";
+import type { StockSucursalItem } from "./inventario-hub";
 
 export interface VarianteInventario {
   id: string;
@@ -63,6 +68,11 @@ export interface ProductoInventario {
 interface InventarioDetalleSheetProps {
   producto: ProductoInventario | null;
   detallesLote: DetalleLoteItem[];
+  stockSucursal?: StockSucursalItem[];
+  sucursales?: { id: string; nombre: string }[];
+  elAltoId?: string;
+  laPazId?: string;
+  isAdmin?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -83,10 +93,70 @@ function formatFecha(fechaStr?: string | null): string {
 export function InventarioDetalleSheet({
   producto,
   detallesLote,
+  stockSucursal = [],
+  elAltoId = "",
+  laPazId = "",
+  isAdmin = false,
   open,
   onOpenChange,
 }: InventarioDetalleSheetProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [transferVarianteId, setTransferVarianteId] = useState<string | null>(null);
+  const [transferDir, setTransferDir] = useState<"ea_to_lp" | "lp_to_ea">("ea_to_lp");
+  const [transferCant, setTransferCant] = useState<string>("1");
+
   if (!producto) return null;
+
+  function getStockSucursal(varianteId: string) {
+    const rows = stockSucursal.filter((s) => s.variante_id === varianteId);
+    if (rows.length === 0) return { ea: null, lp: null };
+    const ea = Number(rows.find((s) => s.sucursal_nombre.toLowerCase().includes("alto"))?.stock_disponible_sucursal ?? 0);
+    const lp = Number(rows.find((s) => s.sucursal_nombre.toLowerCase().includes("paz"))?.stock_disponible_sucursal ?? 0);
+    return { ea, lp };
+  }
+
+  function handleOpenTransfer(varianteId: string, ea: number, lp: number) {
+    if (transferVarianteId === varianteId) {
+      setTransferVarianteId(null);
+      return;
+    }
+    setTransferVarianteId(varianteId);
+    setTransferDir(ea > 0 ? "ea_to_lp" : "lp_to_ea");
+    setTransferCant("1");
+  }
+
+  function handleConfirmTransfer(varianteId: string, ea: number, lp: number) {
+    const cant = parseInt(transferCant, 10) || 0;
+    const maxStock = transferDir === "ea_to_lp" ? ea : lp;
+    if (cant <= 0) {
+      toast.error("Ingresa una cantidad mayor a 0");
+      return;
+    }
+    if (cant > maxStock) {
+      toast.error(`Stock insuficiente en origen (máx. ${maxStock} uds)`);
+      return;
+    }
+    const origenId = transferDir === "ea_to_lp" ? elAltoId : laPazId;
+    const destinoId = transferDir === "ea_to_lp" ? laPazId : elAltoId;
+
+    startTransition(async () => {
+      const res = await realizarTraspaso({
+        origenSucursalId: origenId,
+        destinoSucursalId: destinoId,
+        varianteId,
+        cantidad: cant,
+        motivo: "Traspaso rápido desde Inventario",
+      });
+      if (res.error) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success(`Traspaso confirmado: ${cant} uds movidas`);
+      setTransferVarianteId(null);
+      router.refresh();
+    });
+  }
 
   const totalStock = producto.variantes_producto.reduce(
     (acc, v) => acc + (v.stock_actual || 0),
@@ -251,57 +321,133 @@ export function InventarioDetalleSheet({
                 const isLight = ["#F9FAFB", "#F5F5DC", "#EFEBD9", "#D7C4A5", "#D1D5DB"].includes(hex);
                 const isZero = v.stock_actual === 0;
                 const isLow = v.stock_actual <= v.stock_minimo;
+                const { ea, lp } = getStockSucursal(v.id);
+                const hasSucData = ea !== null && lp !== null;
+                const canTransfer = isAdmin && elAltoId && laPazId && hasSucData && (ea > 0 || lp > 0);
+                const isTransferOpen = transferVarianteId === v.id;
 
                 return (
-                  <div key={v.id} className="p-3 flex items-center justify-between gap-3 hover:bg-muted/20 transition-colors">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span
-                        className="w-4 h-4 rounded-full shrink-0 shadow-2xs"
-                        title={v.color}
-                        style={{
-                          backgroundColor: hex,
-                          border: isLight ? "1px solid #d1d5db" : "none",
-                        }}
-                      />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-xs font-semibold text-foreground capitalize">
-                            {v.color}
+                  <div key={v.id} className="hover:bg-muted/20 transition-colors">
+                    <div className="p-3 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span
+                          className="w-4 h-4 rounded-full shrink-0 shadow-2xs"
+                          title={v.color}
+                          style={{
+                            backgroundColor: hex,
+                            border: isLight ? "1px solid #d1d5db" : "none",
+                          }}
+                        />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-xs font-semibold text-foreground capitalize">
+                              {v.color}
+                            </span>
+                            {v.talla && (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-medium uppercase">
+                                {v.talla}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="font-mono text-[11px] text-muted-foreground truncate">
+                            {v.sku || "Sin SKU"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0 text-right">
+                        {hasSucData && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
+                              🏠 EA: {ea}
+                            </span>
+                            <span
+                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                                lp > 0
+                                  ? "bg-violet-50 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300 border-violet-200 dark:border-violet-700"
+                                  : "bg-amber-50/70 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-200 dark:border-amber-800/50"
+                              }`}
+                            >
+                              📍 LP: {lp}
+                            </span>
+                          </div>
+                        )}
+
+                        {v.stock_reservado > 0 && (
+                          <div className="text-[11px] text-muted-foreground">
+                            <span className="font-medium text-foreground">{v.stock_reservado}</span> res.
+                          </div>
+                        )}
+
+                        <div>
+                          <span
+                            className={`text-xs font-bold ${
+                              isZero ? "text-destructive" : isLow ? "text-amber-500" : "text-foreground"
+                            }`}
+                          >
+                            {v.stock_actual} uds.
                           </span>
-                          {v.talla && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-medium uppercase">
-                              {v.talla}
-                            </Badge>
+                          {v.stock_minimo > 0 && (
+                            <p className="text-[10px] text-muted-foreground">
+                              Mín: {v.stock_minimo}
+                            </p>
                           )}
                         </div>
-                        <p className="font-mono text-[11px] text-muted-foreground truncate">
-                          {v.sku || "Sin SKU"}
-                        </p>
-                      </div>
-                    </div>
 
-                    <div className="flex items-center gap-3 shrink-0 text-right">
-                      {v.stock_reservado > 0 && (
-                        <div className="text-[11px] text-muted-foreground">
-                          <span className="font-medium text-foreground">{v.stock_reservado}</span> res.
-                        </div>
-                      )}
-
-                      <div>
-                        <span
-                          className={`text-xs font-bold ${
-                            isZero ? "text-destructive" : isLow ? "text-amber-500" : "text-foreground"
-                          }`}
-                        >
-                          {v.stock_actual} uds.
-                        </span>
-                        {v.stock_minimo > 0 && (
-                          <p className="text-[10px] text-muted-foreground">
-                            Mín: {v.stock_minimo}
-                          </p>
+                        {canTransfer && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenTransfer(v.id, ea, lp)}
+                            title="Traspaso rápido entre sucursales"
+                            className={`p-1.5 rounded-lg border text-xs transition-colors ${
+                              isTransferOpen
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-background hover:bg-muted text-muted-foreground hover:text-foreground border-border"
+                            }`}
+                          >
+                            <ArrowRightLeft className="w-3.5 h-3.5" />
+                          </button>
                         )}
                       </div>
                     </div>
+
+                    {/* Panel inline de traspaso rápido */}
+                    {isTransferOpen && hasSucData && (
+                      <div className="px-3 pb-3 pt-2 bg-muted/30 border-t border-border/50 flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setTransferDir((d) => (d === "ea_to_lp" ? "lp_to_ea" : "ea_to_lp"))}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border bg-background hover:bg-muted text-xs font-semibold transition-colors"
+                            title="Clic para invertir dirección"
+                          >
+                            {transferDir === "ea_to_lp" ? (
+                              <>🏠 El Alto ({ea}) → 📍 La Paz ({lp})</>
+                            ) : (
+                              <>📍 La Paz ({lp}) → 🏠 El Alto ({ea})</>
+                            )}
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Input
+                            type="number"
+                            min={1}
+                            max={transferDir === "ea_to_lp" ? ea : lp}
+                            value={transferCant}
+                            onChange={(e) => setTransferCant(e.target.value)}
+                            className="w-16 h-7 text-xs text-center font-bold bg-background"
+                          />
+                          <Button
+                            size="sm"
+                            disabled={isPending}
+                            onClick={() => handleConfirmTransfer(v.id, ea, lp)}
+                            className="h-7 text-xs font-bold px-2.5"
+                          >
+                            {isPending ? "..." : "Mover"}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}

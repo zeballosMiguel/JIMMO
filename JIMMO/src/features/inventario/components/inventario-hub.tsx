@@ -20,8 +20,14 @@ interface Categoria {
 
 export interface StockSucursalItem {
   variante_id: string;
+  sucursal_id?: string;
   sucursal_nombre: string;
   stock_disponible_sucursal: number;
+}
+
+interface SucursalOption {
+  id: string;
+  nombre: string;
 }
 
 interface InventarioHubProps {
@@ -29,11 +35,25 @@ interface InventarioHubProps {
   categorias: Categoria[];
   detallesLote: DetalleLoteItem[];
   stockSucursal?: StockSucursalItem[];
+  sucursales?: SucursalOption[];
+  elAltoId?: string;
+  laPazId?: string;
+  isAdmin?: boolean;
 }
 
-export function InventarioHub({ productos, categorias, detallesLote, stockSucursal = [] }: InventarioHubProps) {
+export function InventarioHub({
+  productos,
+  categorias,
+  detallesLote,
+  stockSucursal = [],
+  sucursales = [],
+  elAltoId = "",
+  laPazId = "",
+  isAdmin = false,
+}: InventarioHubProps) {
   const [search, setSearch] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState<string | null>(null);
+  const [sucursalFiltro, setSucursalFiltro] = useState<"all" | "ea" | "lp">("all");
   const [filtroBajo, setFiltroBajo] = useState(false);
   const [filtroAgotado, setFiltroAgotado] = useState(false);
   const [selectedProducto, setSelectedProducto] = useState<ProductoInventario | null>(null);
@@ -77,9 +97,23 @@ export function InventarioHub({ productos, categorias, detallesLote, stockSucurs
       // Filtro de agotados (stock total = 0)
       const matchAgotado = !filtroAgotado || totalStock === 0;
 
-      return matchSearch && matchCat && matchBajo && matchAgotado;
+      // Filtro por sucursal (El Alto / La Paz)
+      let matchSucursal = true;
+      if (sucursalFiltro !== "all" && stockSucursal.length > 0) {
+        const keyword = sucursalFiltro === "ea" ? "alto" : "paz";
+        matchSucursal = p.variantes_producto.some((v) =>
+          stockSucursal.some(
+            (s) =>
+              s.variante_id === v.id &&
+              s.sucursal_nombre.toLowerCase().includes(keyword) &&
+              Number(s.stock_disponible_sucursal) > 0
+          )
+        );
+      }
+
+      return matchSearch && matchCat && matchBajo && matchAgotado && matchSucursal;
     });
-  }, [productos, search, categoriaFiltro, filtroBajo, filtroAgotado]);
+  }, [productos, search, categoriaFiltro, filtroBajo, filtroAgotado, sucursalFiltro, stockSucursal]);
 
   // Mantener producto seleccionado actualizado si se actualiza la lista
   const activeSelected = selectedProducto
@@ -189,12 +223,50 @@ export function InventarioHub({ productos, categorias, detallesLote, stockSucurs
         </div>
       </div>
 
-      {/* ── Contador de Resultados ───────────────────────────────── */}
-      <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+      {/* ── Contador de Resultados + Filtro por Sucursal ─────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-muted-foreground px-1">
         <span>
           Mostrando <strong className="text-foreground">{filtered.length}</strong> de{" "}
           {productos.length} productos
         </span>
+
+        {stockSucursal.length > 0 && (
+          <div className="inline-flex items-center gap-1 bg-muted/50 p-1 rounded-xl border border-border/70 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setSucursalFiltro("all")}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                sucursalFiltro === "all"
+                  ? "bg-background text-foreground shadow-2xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Todas
+            </button>
+            <button
+              type="button"
+              onClick={() => setSucursalFiltro("ea")}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                sucursalFiltro === "ea"
+                  ? "bg-background text-foreground shadow-2xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              🏠 El Alto
+            </button>
+            <button
+              type="button"
+              onClick={() => setSucursalFiltro("lp")}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                sucursalFiltro === "lp"
+                  ? "bg-background text-violet-700 dark:text-violet-300 shadow-2xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              📍 La Paz
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Grid de Tarjetas (Diseño según imagen solicitada) ─────── */}
@@ -226,6 +298,11 @@ export function InventarioHub({ productos, categorias, detallesLote, stockSucurs
       <InventarioDetalleSheet
         producto={activeSelected}
         detallesLote={detallesLote}
+        stockSucursal={stockSucursal}
+        sucursales={sucursales}
+        elAltoId={elAltoId}
+        laPazId={laPazId}
+        isAdmin={isAdmin}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
       />

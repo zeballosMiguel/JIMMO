@@ -695,6 +695,7 @@ export async function crearLoteCompleto(data: {
 export interface DesgloseVarianteItem {
   variante_id: string;
   cantidad: number;
+  sucursal_id?: string | null;
 }
 
 export async function desglosarYRecibirLote(data: {
@@ -736,6 +737,13 @@ export async function desglosarYRecibirLote(data: {
   await supabase.from("detalle_lote").delete().eq("lote_id", data.loteId);
 
   // 4. Preparar registros para detalle_lote
+  const { data: elAltoRow } = await supabase
+    .from("sucursales")
+    .select("id")
+    .ilike("nombre", "%alto%")
+    .limit(1)
+    .maybeSingle();
+
   const detalleRows = validItems.map((item) => {
     const propOtrosCostos = data.otrosCostosBs && totalUnidades > 0
       ? (data.otrosCostosBs / totalUnidades) * item.cantidad
@@ -744,6 +752,7 @@ export async function desglosarYRecibirLote(data: {
     return {
       lote_id: data.loteId,
       variante_id: item.variante_id,
+      sucursal_id: item.sucursal_id ?? elAltoRow?.id ?? null,
       cantidad: item.cantidad,
       costo_unitario_bs: Number(data.costoUnitarioBs.toFixed(2)),
       costo_unitario_usd: data.costoUnitarioUsd ? Number(data.costoUnitarioUsd.toFixed(4)) : null,
@@ -1048,6 +1057,13 @@ export async function soloDesgloseDetalleLote(data: {
   }
 
   // 4. Preparar registros para detalle_lote
+  const { data: elAltoRow } = await supabase
+    .from("sucursales")
+    .select("id")
+    .ilike("nombre", "%alto%")
+    .limit(1)
+    .maybeSingle();
+
   const detalleRows = validItems.map((item) => {
     const propOtrosCostos =
       data.otrosCostosBs && totalUnidades > 0
@@ -1057,6 +1073,7 @@ export async function soloDesgloseDetalleLote(data: {
     return {
       lote_id: data.loteId,
       variante_id: item.variante_id,
+      sucursal_id: item.sucursal_id ?? elAltoRow?.id ?? null,
       cantidad: item.cantidad,
       costo_unitario_bs: Number(data.costoUnitarioBs.toFixed(2)),
       costo_unitario_usd: data.costoUnitarioUsd ? Number(data.costoUnitarioUsd.toFixed(4)) : null,

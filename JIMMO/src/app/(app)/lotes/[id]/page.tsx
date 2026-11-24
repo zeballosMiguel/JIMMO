@@ -63,11 +63,12 @@ export default async function LoteDetallePage({
     { data: productos },
     { data: categorias },
     { data: inversionistas },
+    { data: sucursales },
   ] = await Promise.all([
     supabase
       .from("detalle_lote")
       .select(
-        "id, lote_id, variante_id, cantidad, cantidad_disponible, costo_unitario_bs, costo_unitario_usd, otros_costos_bs, variantes_producto(id, color, talla, sku, productos(id, nombre, codigo_interno))"
+        "id, lote_id, variante_id, sucursal_id, cantidad, cantidad_disponible, costo_unitario_bs, costo_unitario_usd, otros_costos_bs, variantes_producto(id, color, talla, sku, productos(id, nombre, codigo_interno))"
       )
       .eq("lote_id", id)
       .order("created_at", { ascending: true }),
@@ -89,6 +90,11 @@ export default async function LoteDetallePage({
       .select("id, nombre")
       .eq("activo", true)
       .order("nombre"),
+    supabase
+      .from("sucursales")
+      .select("id, nombre")
+      .eq("activa", true)
+      .order("nombre"),
   ]);
 
   return (
@@ -99,6 +105,7 @@ export default async function LoteDetallePage({
       productos={(productos ?? []) as any}
       categorias={categorias ?? []}
       inversionistas={inversionistas ?? []}
+      sucursales={sucursales ?? []}
       initialTab={tab}
       initialAction={action}
     />

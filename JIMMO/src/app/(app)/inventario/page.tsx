@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getPerfil } from "@/lib/auth/session";
 import { InventarioHub } from "@/features/inventario/components/inventario-hub";
 import { Boxes, Package, AlertTriangle, Layers } from "lucide-react";
 import { RefreshButton } from "@/components/ui/refresh-button";
@@ -13,6 +14,7 @@ export const metadata = { title: "Inventario" };
 
 export default async function InventarioPage() {
   const supabase = await createClient();
+  const perfil = await getPerfil();
 
   // Auto-recibir lotes que llegaron a su fecha para tener inventario al día
   await supabase.rpc("auto_recibir_lotes_vencidos");
@@ -22,6 +24,7 @@ export default async function InventarioPage() {
     { data: categorias },
     { data: detallesLote },
     { data: stockSucursalRaw },
+    { data: sucursalesRaw },
   ] = await Promise.all([
     supabase
       .from("productos")
@@ -39,8 +42,13 @@ export default async function InventarioPage() {
       .order("created_at", { ascending: false }),
     (supabase as any)
       .from("vw_stock_sucursal")
-      .select("variante_id, sucursal_nombre, stock_disponible_sucursal"),
+      .select("variante_id, sucursal_id, sucursal_nombre, stock_disponible_sucursal"),
+    supabase.from("sucursales").select("id, nombre").eq("activa", true).order("nombre"),
   ]);
+
+  const sucursales = (sucursalesRaw || []).map((s: any) => ({ id: s.id, nombre: s.nombre }));
+  const elAltoId = sucursales.find((s) => s.nombre.toLowerCase().includes("alto"))?.id ?? sucursales[0]?.id ?? "";
+  const laPazId = sucursales.find((s) => s.nombre.toLowerCase().includes("paz"))?.id ?? sucursales[1]?.id ?? "";
 
   // Enriquecer categorías con conteo de productos
   const categoriasConCount = (categorias || []).map((cat) => ({
@@ -147,6 +155,10 @@ export default async function InventarioPage() {
         categorias={categoriasConCount}
         detallesLote={(detallesLote as any) || []}
         stockSucursal={(stockSucursalRaw as any) || []}
+        sucursales={sucursales}
+        elAltoId={elAltoId}
+        laPazId={laPazId}
+        isAdmin={perfil?.rol === "admin"}
       />
     </div>
   );

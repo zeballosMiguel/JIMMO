@@ -18,6 +18,7 @@ export default async function NuevoPedidoPage() {
     { data: productosRaw },
     { data: categoriasRaw },
     { data: detalleLoteRaw },
+    { data: stockSucursalRaw },
   ] = await Promise.all([
     supabase.from("clientes").select("id, nombre, telefono, ciudad").eq("activo", true).order("nombre"),
     supabase.from("vendedores").select("id, nombre, perfil_id").eq("activo", true).order("nombre"),
@@ -28,6 +29,7 @@ export default async function NuevoPedidoPage() {
     supabase.from("productos").select("id, nombre, codigo_interno, descripcion, categoria_id, categorias(id, nombre)").eq("activo", true).order("nombre"),
     supabase.from("categorias").select("id, nombre").order("nombre"),
     supabase.from("detalle_lote").select("variante_id, precio_detalle, costo_unitario_bs"),
+    (supabase as any).from("vw_stock_sucursal").select("variante_id, sucursal_nombre, stock_disponible_sucursal"),
   ]);
 
   // Vendedor actual
@@ -79,6 +81,7 @@ export default async function NuevoPedidoPage() {
         variantes={variantes}
         productos={productos}
         categorias={categoriasRaw || []}
+        stockSucursal={(stockSucursalRaw as any) || []}
         currentVendedorId={currentVendedor?.id}
         isAdmin={perfil?.rol === "admin"}
       />
