@@ -22,14 +22,14 @@ export default async function NuevoPedidoPage() {
   ] = await Promise.all([
     supabase.from("clientes").select("id, nombre, telefono, ciudad").eq("activo", true).order("nombre"),
     supabase.from("vendedores").select("id, nombre, perfil_id").eq("activo", true).order("nombre"),
-    supabase.from("sucursales").select("id, nombre").eq("activa", true).order("nombre"),
+    supabase.from("sucursales").select("id, nombre").eq("activa", true).order("created_at", { ascending: true }).order("nombre", { ascending: true }),
     supabase.from("canales_venta").select("id, nombre").eq("activo", true).order("nombre"),
     supabase.from("tipos_entrega").select("id, nombre").eq("activo", true).order("nombre"),
     supabase.from("vw_inventario").select("*"),
     supabase.from("productos").select("id, nombre, codigo_interno, descripcion, categoria_id, categorias(id, nombre)").eq("activo", true).order("nombre"),
     supabase.from("categorias").select("id, nombre").order("nombre"),
     supabase.from("detalle_lote").select("variante_id, precio_detalle, costo_unitario_bs"),
-    (supabase as any).from("vw_stock_sucursal").select("variante_id, sucursal_nombre, stock_disponible_sucursal"),
+    (supabase as any).from("vw_stock_sucursal").select("variante_id, sucursal_id, sucursal_nombre, stock_disponible_sucursal"),
   ]);
 
   // Vendedor actual

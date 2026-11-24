@@ -5,9 +5,14 @@
 ALTER TABLE detalle_lote
   ADD COLUMN IF NOT EXISTS sucursal_id UUID REFERENCES sucursales(id);
 
--- Asignar todo el stock existente a El Alto (sucursal matriz / default)
+-- Asignar todo el stock existente a la sucursal matriz (primera sucursal activa creada)
 UPDATE detalle_lote
-SET sucursal_id = (SELECT id FROM sucursales WHERE nombre ILIKE '%alto%' LIMIT 1)
+SET sucursal_id = (
+  SELECT id FROM sucursales
+  WHERE activa = true
+  ORDER BY created_at ASC, nombre ASC
+  LIMIT 1
+)
 WHERE sucursal_id IS NULL;
 
 -- Índice para performance en queries por sucursal

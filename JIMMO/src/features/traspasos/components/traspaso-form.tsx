@@ -255,8 +255,8 @@ export function TraspasoForm({
             <div className="px-5 py-2.5 bg-muted/40 border-b border-border grid grid-cols-12 gap-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
               <span className="col-span-4">Producto / Variante</span>
               <span className="col-span-2">SKU</span>
-              <span className="col-span-2 text-center">Stock {origenNombre.includes("Alto") ? "🏠 EA" : "📍 LP"}</span>
-              <span className="col-span-2 text-center">Stock {destinoNombre.includes("Alto") ? "🏠 EA" : "📍 LP"}</span>
+              <span className="col-span-2 text-center">Stock {origenId === elAltoId ? "EA" : "LP"}</span>
+              <span className="col-span-2 text-center">Stock {destinoId === elAltoId ? "EA" : "LP"}</span>
               <span className="col-span-2 text-right">Cantidad</span>
             </div>
 
@@ -358,8 +358,9 @@ export function TraspasoForm({
         ) : (
           <div className="divide-y divide-border/60">
             {historial.map((h) => {
-              const isFromEA = h.origen_sucursal_nombre.toLowerCase().includes("alto");
-              const isToLP = h.destino_sucursal_nombre.toLowerCase().includes("paz");
+              const eaNombre = sucursales.find((s) => s.id === elAltoId)?.nombre ?? "";
+              const isFromEA = eaNombre ? h.origen_sucursal_nombre === eaNombre : true;
+              const isToLP = eaNombre ? h.destino_sucursal_nombre !== eaNombre : true;
               return (
                 <div key={h.id} className="px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs hover:bg-muted/20 transition-colors">
                   <div className="flex-1 min-w-0 space-y-1">
@@ -376,11 +377,11 @@ export function TraspasoForm({
                     </div>
                     <div className="flex items-center gap-1.5 flex-wrap text-[11px]">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium">
-                        {isFromEA ? "🏠" : "📍"} {h.origen_sucursal_nombre}
+                        {isFromEA ? "EA" : "LP"} · {h.origen_sucursal_nombre}
                       </span>
                       <span className="text-muted-foreground font-bold">→</span>
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-violet-50 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 font-medium">
-                        {isToLP ? "📍" : "🏠"} {h.destino_sucursal_nombre}
+                        {isToLP ? "LP" : "EA"} · {h.destino_sucursal_nombre}
                       </span>
                       {h.motivo && (
                         <span className="text-muted-foreground italic ml-1">· "{h.motivo}"</span>

@@ -740,7 +740,9 @@ export async function desglosarYRecibirLote(data: {
   const { data: elAltoRow } = await supabase
     .from("sucursales")
     .select("id")
-    .ilike("nombre", "%alto%")
+    .eq("activa", true)
+    .order("created_at", { ascending: true })
+    .order("nombre", { ascending: true })
     .limit(1)
     .maybeSingle();
 
@@ -1060,7 +1062,9 @@ export async function soloDesgloseDetalleLote(data: {
   const { data: elAltoRow } = await supabase
     .from("sucursales")
     .select("id")
-    .ilike("nombre", "%alto%")
+    .eq("activa", true)
+    .order("created_at", { ascending: true })
+    .order("nombre", { ascending: true })
     .limit(1)
     .maybeSingle();
 

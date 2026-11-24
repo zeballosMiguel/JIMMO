@@ -94,25 +94,70 @@ export function InventarioDetalleSheet({
   producto,
   detallesLote,
   stockSucursal = [],
+  sucursales = [],
   elAltoId = "",
   laPazId = "",
   isAdmin = false,
   open,
   onOpenChange,
 }: InventarioDetalleSheetProps) {
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        className="data-[side=right]:sm:max-w-xl data-[side=right]:md:max-w-2xl sm:max-w-xl md:max-w-2xl w-full p-0 flex flex-col h-full bg-background border-l border-border shadow-2xl"
+      >
+        {producto && (
+          <DetalleSheetContent
+            producto={producto}
+            detallesLote={detallesLote}
+            stockSucursal={stockSucursal}
+            sucursales={sucursales}
+            elAltoId={elAltoId}
+            laPazId={laPazId}
+            isAdmin={isAdmin}
+          />
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function DetalleSheetContent({
+  producto,
+  detallesLote,
+  stockSucursal = [],
+  sucursales = [],
+  elAltoId = "",
+  laPazId = "",
+  isAdmin = false,
+}: {
+  producto: ProductoInventario;
+  detallesLote: DetalleLoteItem[];
+  stockSucursal: StockSucursalItem[];
+  sucursales: { id: string; nombre: string }[];
+  elAltoId: string;
+  laPazId: string;
+  isAdmin: boolean;
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [transferVarianteId, setTransferVarianteId] = useState<string | null>(null);
   const [transferDir, setTransferDir] = useState<"ea_to_lp" | "lp_to_ea">("ea_to_lp");
   const [transferCant, setTransferCant] = useState<string>("1");
 
-  if (!producto) return null;
+  const eaNombre = sucursales.find((s) => s.id === elAltoId)?.nombre ?? sucursales[0]?.nombre ?? "EA";
+  const lpNombre = sucursales.find((s) => s.id === laPazId)?.nombre ?? sucursales[1]?.nombre ?? "LP";
 
   function getStockSucursal(varianteId: string) {
     const rows = stockSucursal.filter((s) => s.variante_id === varianteId);
     if (rows.length === 0) return { ea: null, lp: null };
-    const ea = Number(rows.find((s) => s.sucursal_nombre.toLowerCase().includes("alto"))?.stock_disponible_sucursal ?? 0);
-    const lp = Number(rows.find((s) => s.sucursal_nombre.toLowerCase().includes("paz"))?.stock_disponible_sucursal ?? 0);
+    const ea = elAltoId
+      ? Number(rows.find((s) => s.sucursal_id === elAltoId)?.stock_disponible_sucursal ?? 0)
+      : Number(rows[0]?.stock_disponible_sucursal ?? 0);
+    const lp = laPazId
+      ? Number(rows.find((s) => s.sucursal_id === laPazId)?.stock_disponible_sucursal ?? 0)
+      : Number(rows[1]?.stock_disponible_sucursal ?? 0);
     return { ea, lp };
   }
 
@@ -233,11 +278,7 @@ export function InventarioDetalleSheet({
   }, [detallesLote, producto.id]);
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="data-[side=right]:sm:max-w-xl data-[side=right]:md:max-w-2xl sm:max-w-xl md:max-w-2xl w-full p-0 flex flex-col h-full bg-background border-l border-border shadow-2xl"
-      >
+    <>
         {/* ── Encabezado ─────────────────────────────────────────── */}
         <div className="p-5 border-b border-border/70 bg-muted/20 flex flex-col gap-3">
           <div className="flex items-start justify-between gap-3 pr-8">
@@ -359,7 +400,7 @@ export function InventarioDetalleSheet({
                         {hasSucData && (
                           <div className="flex items-center gap-1">
                             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
-                              🏠 EA: {ea}
+                              EA: {ea}
                             </span>
                             <span
                               className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
@@ -368,7 +409,7 @@ export function InventarioDetalleSheet({
                                   : "bg-amber-50/70 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-200 dark:border-amber-800/50"
                               }`}
                             >
-                              📍 LP: {lp}
+                              LP: {lp}
                             </span>
                           </div>
                         )}
@@ -422,9 +463,9 @@ export function InventarioDetalleSheet({
                             title="Clic para invertir dirección"
                           >
                             {transferDir === "ea_to_lp" ? (
-                              <>🏠 El Alto ({ea}) → 📍 La Paz ({lp})</>
+                              <>EA · {eaNombre} ({ea}) → LP · {lpNombre} ({lp})</>
                             ) : (
-                              <>📍 La Paz ({lp}) → 🏠 El Alto ({ea})</>
+                              <>LP · {lpNombre} ({lp}) → EA · {eaNombre} ({ea})</>
                             )}
                           </button>
                         </div>
@@ -558,7 +599,6 @@ export function InventarioDetalleSheet({
             )}
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+    </>
   );
 }

@@ -167,11 +167,11 @@ export function LoteContarWorkstation({
   const [isPending, startTransition] = useTransition();
 
   const elAltoId = useMemo(
-    () => sucursales.find((s) => s.nombre.toLowerCase().includes("alto"))?.id ?? sucursales[0]?.id ?? "",
+    () => sucursales[0]?.id ?? "",
     [sucursales]
   );
   const laPazId = useMemo(
-    () => sucursales.find((s) => s.nombre.toLowerCase().includes("paz"))?.id ?? sucursales[1]?.id ?? "",
+    () => sucursales[1]?.id ?? "",
     [sucursales]
   );
   const hasSucursales = Boolean(elAltoId && laPazId);
@@ -1042,10 +1042,10 @@ export function LoteContarWorkstation({
                               hasSucursales ? (
                                 <div className="flex items-center gap-1.5">
                                   <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
-                                    🏠 {valSuc.ea}
+                                    EA: {valSuc.ea}
                                   </span>
                                   <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-violet-50 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300 border border-violet-200 dark:border-violet-700">
-                                    📍 {valSuc.lp}
+                                    LP: {valSuc.lp}
                                   </span>
                                   <span className="font-mono font-black text-xs text-foreground bg-muted/60 px-2 py-0.5 rounded border border-border">
                                     = {cant}
@@ -1061,8 +1061,8 @@ export function LoteContarWorkstation({
                                 {/* Split El Alto + La Paz */}
                                 <div className="flex items-center gap-1.5">
                                   <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-900/50 border border-border rounded-lg px-1.5 py-0.5">
-                                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300" title="El Alto (Matriz)">
-                                      🏠 EA
+                                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300" title={sucursales[0]?.nombre ?? "EA (Matriz)"}>
+                                      EA
                                     </span>
                                     <Input
                                       type="number"
@@ -1076,8 +1076,8 @@ export function LoteContarWorkstation({
                                   </div>
 
                                   <div className="flex items-center gap-1 bg-violet-50/50 dark:bg-violet-950/30 border border-violet-200/80 dark:border-violet-800/60 rounded-lg px-1.5 py-0.5">
-                                    <span className="text-[10px] font-bold text-violet-700 dark:text-violet-300" title="La Paz (Sucursal)">
-                                      📍 LP
+                                    <span className="text-[10px] font-bold text-violet-700 dark:text-violet-300" title={sucursales[1]?.nombre ?? "LP (Sucursal)"}>
+                                      LP
                                     </span>
                                     <Input
                                       type="number"

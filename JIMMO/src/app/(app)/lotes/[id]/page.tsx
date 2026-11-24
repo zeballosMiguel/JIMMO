@@ -94,7 +94,8 @@ export default async function LoteDetallePage({
       .from("sucursales")
       .select("id, nombre")
       .eq("activa", true)
-      .order("nombre"),
+      .order("created_at", { ascending: true })
+      .order("nombre", { ascending: true }),
   ]);
 
   return (

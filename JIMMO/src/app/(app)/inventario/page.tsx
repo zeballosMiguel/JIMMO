@@ -6,6 +6,7 @@ import { RefreshButton } from "@/components/ui/refresh-button";
 
 export type StockSucursalItem = {
   variante_id: string;
+  sucursal_id?: string;
   sucursal_nombre: string;
   stock_disponible_sucursal: number;
 };
@@ -43,12 +44,12 @@ export default async function InventarioPage() {
     (supabase as any)
       .from("vw_stock_sucursal")
       .select("variante_id, sucursal_id, sucursal_nombre, stock_disponible_sucursal"),
-    supabase.from("sucursales").select("id, nombre").eq("activa", true).order("nombre"),
+    supabase.from("sucursales").select("id, nombre").eq("activa", true).order("created_at", { ascending: true }).order("nombre", { ascending: true }),
   ]);
 
   const sucursales = (sucursalesRaw || []).map((s: any) => ({ id: s.id, nombre: s.nombre }));
-  const elAltoId = sucursales.find((s) => s.nombre.toLowerCase().includes("alto"))?.id ?? sucursales[0]?.id ?? "";
-  const laPazId = sucursales.find((s) => s.nombre.toLowerCase().includes("paz"))?.id ?? sucursales[1]?.id ?? "";
+  const elAltoId = sucursales[0]?.id ?? "";
+  const laPazId = sucursales[1]?.id ?? "";
 
   // Enriquecer categorías con conteo de productos
   const categoriasConCount = (categorias || []).map((cat) => ({

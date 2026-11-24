@@ -80,6 +80,7 @@ export interface SelectOption {
 
 export interface StockSucursalRow {
   variante_id: string;
+  sucursal_id?: string;
   sucursal_nombre: string;
   stock_disponible_sucursal: number;
 }
@@ -880,11 +881,23 @@ export function NuevoPedidoForm({
                             const isOutOfStock = v.stock_disponible <= 0;
                             const sucRows = stockSucursal.filter((s) => s.variante_id === v.id);
                             const hasSuc = sucRows.length > 0;
+                            const eaSucId = sucursales[0]?.id;
+                            const lpSucId = sucursales[1]?.id;
+                            const eaSucNombre = sucursales[0]?.nombre;
+                            const lpSucNombre = sucursales[1]?.nombre;
                             const eaStock = hasSuc
-                              ? Number(sucRows.find((s) => s.sucursal_nombre.toLowerCase().includes("alto"))?.stock_disponible_sucursal ?? 0)
+                              ? Number(
+                                  sucRows.find((s) =>
+                                    eaSucId ? s.sucursal_id === eaSucId : s.sucursal_nombre === eaSucNombre
+                                  )?.stock_disponible_sucursal ?? 0
+                                )
                               : 0;
                             const lpStock = hasSuc
-                              ? Number(sucRows.find((s) => s.sucursal_nombre.toLowerCase().includes("paz"))?.stock_disponible_sucursal ?? 0)
+                              ? Number(
+                                  sucRows.find((s) =>
+                                    lpSucId ? s.sucursal_id === lpSucId : s.sucursal_nombre === lpSucNombre
+                                  )?.stock_disponible_sucursal ?? 0
+                                )
                               : 0;
                             const onlyInEA = hasSuc && lpStock === 0 && eaStock > 0;
 
@@ -896,7 +909,7 @@ export function NuevoPedidoForm({
                                 onClick={() => handleAddVariant(v)}
                                 title={
                                   hasSuc
-                                    ? `${v.color || "Color"} / ${v.talla || "U"} — El Alto: ${eaStock} | La Paz: ${lpStock}`
+                                    ? `${v.color || "Color"} / ${v.talla || "U"} — EA: ${eaStock} | LP: ${lpStock}`
                                     : `${v.color || "Color"} / ${v.talla || "U"} (Disponibles: ${v.stock_disponible})`
                                 }
                                 className={`text-left p-1.5 rounded-lg border transition-all flex flex-col gap-0.5 ${isOutOfStock
@@ -921,7 +934,7 @@ export function NuevoPedidoForm({
                                 </div>
                                 {hasSuc && !isOutOfStock && (
                                   <div className={`text-[9px] font-mono leading-none ${cartItem ? "text-zinc-300" : "text-muted-foreground"}`}>
-                                    🏠{eaStock} · 📍{lpStock}
+                                    EA:{eaStock} · LP:{lpStock}
                                   </div>
                                 )}
                               </button>

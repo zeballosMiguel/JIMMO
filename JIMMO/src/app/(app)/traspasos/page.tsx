@@ -20,7 +20,7 @@ export default async function TraspasosPage() {
     { data: variantesRaw },
     { data: historialRaw },
   ] = await Promise.all([
-    supabase.from("sucursales").select("id, nombre").eq("activa", true).order("nombre"),
+    supabase.from("sucursales").select("id, nombre").eq("activa", true).order("created_at", { ascending: true }).order("nombre", { ascending: true }),
     (supabase as any).from("vw_stock_sucursal").select("variante_id, sucursal_id, sucursal_nombre, stock_disponible_sucursal"),
     supabase
       .from("variantes_producto")
@@ -41,11 +41,11 @@ export default async function TraspasosPage() {
 
   const sucursales = (sucursalesRaw || []).map((s: any) => ({ id: s.id, nombre: s.nombre }));
 
-  // Identificar UUIDs de El Alto y La Paz
-  const elAlto = sucursales.find((s) => s.nombre.toLowerCase().includes("alto"));
-  const laPaz = sucursales.find((s) => s.nombre.toLowerCase().includes("paz"));
-  const elAltoId = elAlto?.id ?? sucursales[0]?.id ?? "";
-  const laPazId = laPaz?.id ?? sucursales[1]?.id ?? "";
+  // Identificar UUIDs de EA (matriz) y LP (sucursal) por orden de creación
+  const elAltoId = sucursales[0]?.id ?? "";
+  const laPazId = sucursales[1]?.id ?? "";
+  const eaNombre = sucursales[0]?.nombre ?? "EA";
+  const lpNombre = sucursales[1]?.nombre ?? "LP";
 
   // Construir mapa de stock por variante y sucursal
   const stockMap = new Map<string, { ea: number; lp: number }>();
@@ -53,9 +53,9 @@ export default async function TraspasosPage() {
     const varId = row.variante_id;
     if (!stockMap.has(varId)) stockMap.set(varId, { ea: 0, lp: 0 });
     const entry = stockMap.get(varId)!;
-    if (row.sucursal_nombre?.toLowerCase().includes("alto")) {
+    if (elAltoId && row.sucursal_id === elAltoId) {
       entry.ea += Number(row.stock_disponible_sucursal) || 0;
-    } else if (row.sucursal_nombre?.toLowerCase().includes("paz")) {
+    } else if (laPazId && row.sucursal_id === laPazId) {
       entry.lp += Number(row.stock_disponible_sucursal) || 0;
     }
   }
@@ -101,8 +101,8 @@ export default async function TraspasosPage() {
           </div>
           <p className="text-sm text-muted-foreground mt-1">
             Mueve unidades entre{" "}
-            <span className="font-medium">🏠 El Alto</span> y{" "}
-            <span className="font-medium">📍 La Paz</span>.
+            <span className="font-medium">EA ({eaNombre})</span> y{" "}
+            <span className="font-medium">LP ({lpNombre})</span>.
           </p>
         </div>
       </div>

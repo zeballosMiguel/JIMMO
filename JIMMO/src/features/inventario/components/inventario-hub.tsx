@@ -97,15 +97,16 @@ export function InventarioHub({
       // Filtro de agotados (stock total = 0)
       const matchAgotado = !filtroAgotado || totalStock === 0;
 
-      // Filtro por sucursal (El Alto / La Paz)
+      // Filtro por sucursal (EA / LP)
       let matchSucursal = true;
       if (sucursalFiltro !== "all" && stockSucursal.length > 0) {
-        const keyword = sucursalFiltro === "ea" ? "alto" : "paz";
+        const targetId = sucursalFiltro === "ea" ? elAltoId : laPazId;
+        const targetNombre = sucursalFiltro === "ea" ? sucursales[0]?.nombre : sucursales[1]?.nombre;
         matchSucursal = p.variantes_producto.some((v) =>
           stockSucursal.some(
             (s) =>
               s.variante_id === v.id &&
-              s.sucursal_nombre.toLowerCase().includes(keyword) &&
+              (targetId ? s.sucursal_id === targetId : s.sucursal_nombre === targetNombre) &&
               Number(s.stock_disponible_sucursal) > 0
           )
         );
@@ -113,7 +114,7 @@ export function InventarioHub({
 
       return matchSearch && matchCat && matchBajo && matchAgotado && matchSucursal;
     });
-  }, [productos, search, categoriaFiltro, filtroBajo, filtroAgotado, sucursalFiltro, stockSucursal]);
+  }, [productos, search, categoriaFiltro, filtroBajo, filtroAgotado, sucursalFiltro, stockSucursal, elAltoId, laPazId, sucursales]);
 
   // Mantener producto seleccionado actualizado si se actualiza la lista
   const activeSelected = selectedProducto
@@ -252,7 +253,7 @@ export function InventarioHub({
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              🏠 El Alto
+              EA{sucursales[0]?.nombre ? ` · ${sucursales[0].nombre}` : ""}
             </button>
             <button
               type="button"
@@ -263,7 +264,7 @@ export function InventarioHub({
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              📍 La Paz
+              LP{sucursales[1]?.nombre ? ` · ${sucursales[1].nombre}` : ""}
             </button>
           </div>
         )}
@@ -288,6 +289,8 @@ export function InventarioHub({
               producto={prod}
               detallesLote={detallesLote}
               stockSucursal={stockSucursal}
+              elAltoId={elAltoId}
+              laPazId={laPazId}
               onVer={handleVerDetalle}
             />
           ))}

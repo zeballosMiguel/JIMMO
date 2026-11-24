@@ -8,10 +8,18 @@ interface InventarioCardProps {
   producto: ProductoInventario;
   detallesLote?: DetalleLoteItem[];
   stockSucursal?: StockSucursalItem[];
+  elAltoId?: string;
+  laPazId?: string;
   onVer: (producto: ProductoInventario) => void;
 }
 
-export function InventarioCard({ producto, stockSucursal = [], onVer }: InventarioCardProps) {
+export function InventarioCard({
+  producto,
+  stockSucursal = [],
+  elAltoId = "",
+  laPazId = "",
+  onVer,
+}: InventarioCardProps) {
   const totalStock = producto.variantes_producto.reduce(
     (acc, v) => acc + (v.stock_actual || 0),
     0
@@ -44,8 +52,12 @@ export function InventarioCard({ producto, stockSucursal = [], onVer }: Inventar
   function getStockSucursal(varianteId: string) {
     const rows = stockSucursal.filter((s) => s.variante_id === varianteId);
     if (rows.length === 0) return { ea: null, lp: null };
-    const ea = rows.find((s) => s.sucursal_nombre.toLowerCase().includes("alto"))?.stock_disponible_sucursal ?? 0;
-    const lp = rows.find((s) => s.sucursal_nombre.toLowerCase().includes("paz"))?.stock_disponible_sucursal ?? 0;
+    const ea = elAltoId
+      ? rows.find((s) => s.sucursal_id === elAltoId)?.stock_disponible_sucursal ?? 0
+      : rows[0]?.stock_disponible_sucursal ?? 0;
+    const lp = laPazId
+      ? rows.find((s) => s.sucursal_id === laPazId)?.stock_disponible_sucursal ?? 0
+      : rows[1]?.stock_disponible_sucursal ?? 0;
     return { ea: Number(ea), lp: Number(lp) };
   }
 
@@ -137,24 +149,24 @@ export function InventarioCard({ producto, stockSucursal = [], onVer }: Inventar
                   {hasSucursalData ? (
                     <>
                       <span
-                        title="Stock en El Alto (Matriz)"
+                        title="Stock EA (Matriz)"
                         className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded border ${
                           (ea ?? 0) > 0
                             ? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700"
                             : "bg-muted/40 text-muted-foreground border-border/50"
                         }`}
                       >
-                        🏠 EA:{ea ?? 0}
+                        EA:{ea ?? 0}
                       </span>
                       <span
-                        title="Stock en La Paz (Sucursal)"
+                        title="Stock LP (Sucursal)"
                         className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded border ${
                           (lp ?? 0) > 0
                             ? "bg-violet-50 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300 border-violet-200 dark:border-violet-700"
                             : "bg-amber-50/60 text-amber-700/80 dark:bg-amber-950/30 dark:text-amber-400/80 border-amber-200/70 dark:border-amber-800/50"
                         }`}
                       >
-                        📍 LP:{lp ?? 0}
+                        LP:{lp ?? 0}
                       </span>
                     </>
                   ) : (
