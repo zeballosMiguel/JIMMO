@@ -5,6 +5,7 @@ import { TraspasoForm, type VarianteStockItem, type TraspasoHistorialItem } from
 import { ArrowRightLeft } from "lucide-react";
 
 export const metadata = { title: "Traspasos de Stock" };
+export const dynamic = "force-dynamic";
 
 export default async function TraspasosPage() {
   const supabase = await createClient();
@@ -18,7 +19,7 @@ export default async function TraspasosPage() {
     { data: sucursalesRaw },
     { data: stockSucursalRaw },
     { data: variantesRaw },
-    { data: historialRaw },
+    { data: historialRaw, error: historialError },
   ] = await Promise.all([
     supabase.from("sucursales").select("id, nombre").eq("activa", true).order("created_at", { ascending: true }).order("nombre", { ascending: true }),
     (supabase as any).from("vw_stock_sucursal").select("variante_id, sucursal_id, sucursal_nombre, stock_disponible_sucursal"),
@@ -71,6 +72,10 @@ export default async function TraspasosPage() {
       };
     })
     .filter((v: VarianteStockItem) => v.stock_ea > 0 || v.stock_lp > 0);
+
+  if (historialError) {
+    console.error("Error cargando historial de traspasos:", historialError);
+  }
 
   // Construir historial resolviendo nombres desde sucursales y variantes ya cargadas
   const sucursalMap = new Map<string, string>(sucursales.map((s) => [s.id, s.nombre]));

@@ -111,3 +111,12 @@ $$;
 GRANT EXECUTE ON FUNCTION realizar_traspaso_stock(UUID, UUID, UUID, INT, TEXT) TO authenticated;
 GRANT SELECT ON vw_stock_sucursal TO authenticated;
 GRANT SELECT ON traspasos_stock TO authenticated;
+
+-- RLS para que usuarios autenticados puedan leer el historial de traspasos
+ALTER TABLE traspasos_stock ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "authenticated_read_traspasos" ON traspasos_stock;
+CREATE POLICY "authenticated_read_traspasos"
+  ON traspasos_stock
+  FOR SELECT
+  TO authenticated
+  USING (true);
