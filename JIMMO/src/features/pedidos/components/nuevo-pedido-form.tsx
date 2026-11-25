@@ -152,6 +152,7 @@ export function NuevoPedidoForm({
   // Productos / Variantes Filtros
   const [activeCategory, setActiveCategory] = useState<string>("Todos");
   const [productSearch, setProductSearch] = useState<string>("");
+  const [soloStockSucursal, setSoloStockSucursal] = useState<boolean>(true);
 
   // Referencias y estados para el slider horizontal de categorías
   const categoryTabsRef = useRef<HTMLDivElement>(null);
@@ -310,9 +311,49 @@ export function NuevoPedidoForm({
     };
   }, [categoryTabs]);
 
-  // Filtrar productos por tab y por texto de búsqueda
+  // Identificar sucursal activa (EA = matriz [0], LP = sucursal [1]) según selector derecho
+  const eaSucId = sucursales[0]?.id ?? "";
+  const lpSucId = sucursales[1]?.id ?? "";
+  const eaSucNombre = sucursales[0]?.nombre ?? "EA";
+  const lpSucNombre = sucursales[1]?.nombre ?? "LP";
+  const isEA = !lpSucId || sucursalId === eaSucId;
+  const activePrefix = isEA ? "EA" : "LP";
+  const otherPrefix = isEA ? "LP" : "EA";
+  const activeSucNombre = sucursales.find((s) => s.id === sucursalId)?.nombre ?? activePrefix;
+
+  const getVarianteSucursalStock = (v: VariantOption) => {
+    const sucRows = stockSucursal.filter((s) => s.variante_id === v.id);
+    const hasSuc = sucRows.length > 0;
+    if (!hasSuc) {
+      return { hasSuc: false, localStock: v.stock_disponible, otherStock: 0 };
+    }
+    const eaStock = Number(
+      sucRows.find((s) => (eaSucId ? s.sucursal_id === eaSucId : s.sucursal_nombre === eaSucNombre))
+        ?.stock_disponible_sucursal ?? 0
+    );
+    const lpStock = Number(
+      sucRows.find((s) => (lpSucId ? s.sucursal_id === lpSucId : s.sucursal_nombre === lpSucNombre))
+        ?.stock_disponible_sucursal ?? 0
+    );
+    return {
+      hasSuc: true,
+      localStock: isEA ? eaStock : lpStock,
+      otherStock: isEA ? lpStock : eaStock,
+    };
+  };
+
+  // Filtrar productos por tab, sucursal y texto de búsqueda
   const filteredProducts = useMemo(() => {
     return catalogProducts.filter((p) => {
+      // Filtro de stock en sucursal activa
+      if (soloStockSucursal && stockSucursal.length > 0) {
+        const hasLocalStock = p.variantes.some((v) => {
+          const { hasSuc, localStock } = getVarianteSucursalStock(v);
+          return hasSuc ? localStock > 0 : v.stock_disponible > 0;
+        });
+        if (!hasLocalStock) return false;
+      }
+
       // Filtro de categoría
       if (activeCategory !== "Todos") {
         const matchCat =
@@ -337,7 +378,7 @@ export function NuevoPedidoForm({
 
       return true;
     });
-  }, [catalogProducts, activeCategory, productSearch]);
+  }, [catalogProducts, activeCategory, productSearch, soloStockSucursal, stockSucursal, sucursalId]);
 
   // Agregar variante al carrito
   function handleAddVariant(v: VariantOption) {
@@ -762,23 +803,48 @@ export function NuevoPedidoForm({
               </div>
             </div>
 
-            {/* Barra de Código de Barras / Búsqueda */}
-            <div className="relative">
-              <ScanLine className="w-5 h-5 text-rose-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <Input
-                value={productSearch}
-                onChange={(e) => setProductSearch(e.target.value)}
-                placeholder="buscar producto por nombre, SKU o color..."
-                className="pl-11 pr-4 h-11 bg-background rounded-xl border-border text-sm"
-              />
-              {productSearch && (
-                <button
-                  type="button"
-                  onClick={() => setProductSearch("")}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+            {/* Barra de Código de Barras / Búsqueda + Indicador de Sucursal Activa */}
+            <div className="space-y-2">
+              <div className="relative">
+                <ScanLine className="w-5 h-5 text-rose-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Input
+                  value={productSearch}
+                  onChange={(e) => setProductSearch(e.target.value)}
+                  placeholder="buscar producto por nombre, SKU o color..."
+                  className="pl-11 pr-4 h-11 bg-background rounded-xl border-border text-sm"
+                />
+                {productSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setProductSearch("")}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {stockSucursal.length > 0 && (
+                <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs">
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <span>Stock en:</span>
+                    <span className="font-bold text-foreground px-2 py-0.5 rounded-md bg-muted border border-border/70">
+                      {activePrefix} · {activeSucNombre}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSoloStockSucursal((prev) => !prev)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-medium transition-all ${
+                      soloStockSucursal
+                        ? "bg-zinc-950 text-white border-zinc-950 dark:bg-zinc-100 dark:text-zinc-900 dark:border-zinc-100"
+                        : "bg-background text-muted-foreground border-border hover:text-foreground"
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${soloStockSucursal ? "bg-emerald-400" : "bg-muted-foreground/50"}`} />
+                    {soloStockSucursal ? "Solo con stock aquí" : "Mostrando todas las sucursales"}
+                  </button>
+                </div>
               )}
             </div>
 
@@ -792,6 +858,15 @@ export function NuevoPedidoForm({
                 {filteredProducts.map((prod) => {
                   const isExpanded = expandedProductIds.has(prod.id);
                   const hasManyVariants = prod.variantes.length > 4;
+                  const hasSucData = stockSucursal.length > 0;
+                  const localProdStock = prod.variantes.reduce(
+                    (acc, v) => acc + getVarianteSucursalStock(v).localStock,
+                    0
+                  );
+                  const otherProdStock = prod.variantes.reduce(
+                    (acc, v) => acc + getVarianteSucursalStock(v).otherStock,
+                    0
+                  );
 
                   return (
                     <div
@@ -832,8 +907,24 @@ export function NuevoPedidoForm({
                             )}
                           </div>
 
-                          <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px] px-2.5 py-0.5 rounded-full shrink-0">
-                            {prod.total_stock} disp.
+                          <span
+                            className={`font-bold text-[11px] px-2.5 py-0.5 rounded-full border shrink-0 ${
+                              hasSucData
+                                ? localProdStock > 0
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800"
+                                  : otherProdStock > 0
+                                    ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800"
+                                    : "bg-red-50 text-red-700 border-red-200"
+                                : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            }`}
+                          >
+                            {hasSucData
+                              ? localProdStock > 0
+                                ? `${activePrefix}: ${localProdStock} disp.`
+                                : otherProdStock > 0
+                                  ? `${activePrefix}: 0 · ${otherPrefix}: ${otherProdStock}`
+                                  : "0 disp."
+                              : `${prod.total_stock} disp.`}
                           </span>
                         </div>
 
@@ -878,28 +969,9 @@ export function NuevoPedidoForm({
                         >
                           {prod.variantes.map((v) => {
                             const cartItem = items.find((it) => it.variante_id === v.id);
-                            const isOutOfStock = v.stock_disponible <= 0;
-                            const sucRows = stockSucursal.filter((s) => s.variante_id === v.id);
-                            const hasSuc = sucRows.length > 0;
-                            const eaSucId = sucursales[0]?.id;
-                            const lpSucId = sucursales[1]?.id;
-                            const eaSucNombre = sucursales[0]?.nombre;
-                            const lpSucNombre = sucursales[1]?.nombre;
-                            const eaStock = hasSuc
-                              ? Number(
-                                  sucRows.find((s) =>
-                                    eaSucId ? s.sucursal_id === eaSucId : s.sucursal_nombre === eaSucNombre
-                                  )?.stock_disponible_sucursal ?? 0
-                                )
-                              : 0;
-                            const lpStock = hasSuc
-                              ? Number(
-                                  sucRows.find((s) =>
-                                    lpSucId ? s.sucursal_id === lpSucId : s.sucursal_nombre === lpSucNombre
-                                  )?.stock_disponible_sucursal ?? 0
-                                )
-                              : 0;
-                            const onlyInEA = hasSuc && lpStock === 0 && eaStock > 0;
+                            const { hasSuc, localStock, otherStock } = getVarianteSucursalStock(v);
+                            const isOutOfStock = hasSuc ? (localStock <= 0 && otherStock <= 0) : v.stock_disponible <= 0;
+                            const onlyInOther = hasSuc && localStock === 0 && otherStock > 0;
 
                             return (
                               <button
@@ -909,34 +981,36 @@ export function NuevoPedidoForm({
                                 onClick={() => handleAddVariant(v)}
                                 title={
                                   hasSuc
-                                    ? `${v.color || "Color"} / ${v.talla || "U"} — EA: ${eaStock} | LP: ${lpStock}`
+                                    ? `${v.color || "Color"} / ${v.talla || "U"} — ${activePrefix}: ${localStock} | ${otherPrefix}: ${otherStock}`
                                     : `${v.color || "Color"} / ${v.talla || "U"} (Disponibles: ${v.stock_disponible})`
                                 }
-                                className={`text-left p-1.5 rounded-lg border transition-all flex flex-col gap-0.5 ${isOutOfStock
+                                className={`text-left px-2 py-1.5 rounded-lg border transition-all flex items-center justify-between gap-1.5 ${isOutOfStock
                                   ? "opacity-40 cursor-not-allowed border-border/40 bg-muted/20 text-muted-foreground"
                                   : cartItem
                                     ? "border-zinc-950 bg-zinc-950 text-white shadow-xs font-semibold"
-                                    : onlyInEA
-                                      ? "border-amber-300/80 bg-amber-50/40 dark:bg-amber-950/20 hover:border-amber-400 text-foreground"
+                                    : onlyInOther
+                                      ? "border-dashed border-amber-300/80 bg-amber-50/30 dark:bg-amber-950/20 hover:border-amber-400 text-muted-foreground"
                                       : "border-border hover:border-zinc-400 bg-background text-foreground hover:bg-muted/40"
                                   }`}
                               >
-                                <div className="flex items-center justify-between gap-1 w-full">
-                                  <span className="truncate text-[10px] leading-tight font-medium">
-                                    {v.color || "Color"} / {v.talla || "U"}
-                                  </span>
-                                  <span
-                                    className={`text-[9px] font-mono shrink-0 tracking-tight ${cartItem ? "text-zinc-300 font-bold" : "text-muted-foreground"
-                                      }`}
-                                  >
-                                    {cartItem ? `x${cartItem.cantidad}` : `(${v.stock_disponible})`}
-                                  </span>
-                                </div>
-                                {hasSuc && !isOutOfStock && (
-                                  <div className={`text-[9px] font-mono leading-none ${cartItem ? "text-zinc-300" : "text-muted-foreground"}`}>
-                                    EA:{eaStock} · LP:{lpStock}
-                                  </div>
-                                )}
+                                <span className="truncate text-[11px] leading-tight font-medium">
+                                  {v.color || "Color"} / {v.talla || "U"}
+                                </span>
+                                <span
+                                  className={`text-[10px] font-mono shrink-0 tracking-tight ${
+                                    cartItem
+                                      ? "text-zinc-300 font-bold"
+                                      : onlyInOther
+                                        ? "text-amber-700 dark:text-amber-400 font-semibold"
+                                        : "text-muted-foreground"
+                                  }`}
+                                >
+                                  {cartItem
+                                    ? `x${cartItem.cantidad}`
+                                    : onlyInOther
+                                      ? `${otherPrefix}:${otherStock}`
+                                      : `(${hasSuc ? localStock : v.stock_disponible})`}
+                                </span>
                               </button>
                             );
                           })}
